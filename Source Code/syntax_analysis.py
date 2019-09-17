@@ -220,7 +220,6 @@ class SyntaxAnalysis():
 
     def assignment(self):
         left = self.variable_name()
-        # Make updates for arrays here
         self.check_token('ASSIGNMENT')
         right = self.expression()
         assignment = Assignment(left, right)
@@ -234,7 +233,7 @@ class SyntaxAnalysis():
 
         indexes = []
 
-        if self.current_token.type == 'PARENTHESIS':
+        if self.current_token.type == 'PARENTHESIS' and self.current_token.value == '[':
            self.check_token_value('[')
            indexes.append(self.index())
            while self.current_token.type == 'COMMA':
@@ -242,7 +241,7 @@ class SyntaxAnalysis():
                indexes.append(self.index())
            self.check_token_value(']')
 
-           element = Element(object, indexes)
+           element = ElementName(object, indexes)
            return element
 
         return object
@@ -256,7 +255,7 @@ class SyntaxAnalysis():
 
         indexes = []
 
-        if self.current_token.type == 'PARENTHESIS':
+        if self.current_token.type == 'PARENTHESIS' and self.current_token.value == '[':
            self.check_token_value('[')
            indexes.append(self.index())
            while self.current_token.type == 'COMMA':

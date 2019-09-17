@@ -103,10 +103,18 @@ class VariableName(AST):
         self.value = token.value
 
 
-class Element(AST):
+class ElementName(AST):
     def __init__(self, variable, indexes):
         self.variable = variable
         self.indexes = indexes
+        self.value = variable.value
+
+
+class ElementValue(AST):
+    def __init__(self, variable, indexes):
+        self.variable = variable
+        self.indexes = indexes
+        self.value = variable.value
 
 # END: Variable Assignment
 

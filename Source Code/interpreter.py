@@ -121,16 +121,16 @@ class Interpreter():
         variable = self.visit(node.variable)
         value = self.visit(node.expression)
 
-        if type(variable) != list:
+        if type(variable) is not list:
             data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(variable)
-            if data_type != None:
+            if data_type is not None:
                 self.check_type(data_type, value, variable)
                 self.CURRENT_SCOPE.add(variable, value)
             else:
                 raise NameError(repr(variable))
         else:
             data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(variable[0])
-            if data_type != None:
+            if data_type is not None:
                 self.check_type(data_type.data_type, value, variable[0])
 
                 dimensions = variable[1]
@@ -144,7 +144,7 @@ class Interpreter():
                     if dimensions[i] < data_type.dimensions[i][0] or dimensions[i] > data_type.dimensions[i][1]:
                         raise IndexError(repr(variable[0]))
 
-                self.CURRENT_SCOPE.add(variable[0], {value: variable[1]})
+                    self.CURRENT_SCOPE.add(variable[0], {str(dimensions): value})
 
             else:
                 raise NameError(repr(variable))
@@ -158,7 +158,11 @@ class Interpreter():
                 #     else:
                 #         raise ReferenceError(repr(var_name))
 
+    def visit_VariableName(self, node):
+        return node.value
+
     def visit_VariableValue(self, node):
+
         var_name = node.value
         value = self.CURRENT_SCOPE.VALUES.get(var_name)
 
@@ -168,16 +172,29 @@ class Interpreter():
         else:
             return value
 
-    def visit_VariableName(self, node):
-        return node.value
+    def visit_ElementName(self, node):
+        var_name = self.visit(node.variable)
+        indexes = []
+        for index in node.indexes:
+            indexes.append(self.visit(index))
 
-    def visit_Element(self, node):
-       var_name = self.visit(node.variable)
-       indexes = []
-       for index in node.indexes:
+        return [var_name, indexes]
+
+    def visit_ElementValue(self, node):
+        var_name = node.value
+
+        indexes = []
+
+        for index in node.indexes:
            indexes.append(self.visit(index))
 
-       return [var_name, indexes]
+        value = self.CURRENT_SCOPE.VALUES.get(var_name).get(str(indexes))
+
+        if self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name) is None:
+            if value is None:
+                raise UnboundLocalError(repr(var_name))
+        else:
+            return value
 
     def visit_Index(self, node):
         return self.visit(node.index)
