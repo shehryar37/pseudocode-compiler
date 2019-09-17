@@ -2,6 +2,7 @@ from function import BuiltInFunction
 from scope import Scope
 from arrays import Array
 
+
 class Interpreter():
     def __init__(self, parser):
         self.parser = parser
@@ -25,7 +26,8 @@ class Interpreter():
 
     def visit_function(self, node):
         method_name = node.name.value
-        visitor = getattr(BuiltInFunction(self.CURRENT_SCOPE), method_name, self.generic_visit)
+        visitor = getattr(BuiltInFunction(self.CURRENT_SCOPE),
+                          method_name, self.generic_visit)
         return visitor(node.parsed_parameters)
 
     def check_type(self, type, value, var_name):
@@ -59,7 +61,7 @@ class Interpreter():
             return self.visit(node.left) / self.visit(node.right)
         elif node.operation.value == 'DIV':
             return self.visit(node.left) // self.visit(node.right)
-        elif node.operation.value  == 'MOD':
+        elif node.operation.value == 'MOD':
             return self.visit(node.left) % self.visit(node.right)
 
     def visit_UnaryOperation(self, node):
@@ -80,7 +82,8 @@ class Interpreter():
             self.visit(declaration)
 
     def visit_VariableDeclaration(self, declaration):
-        self.CURRENT_SCOPE.SYMBOL_TABLE.add(self.visit(declaration.variable), self.visit(declaration.data_type))
+        self.CURRENT_SCOPE.SYMBOL_TABLE.add(self.visit(
+            declaration.variable), self.visit(declaration.data_type))
 
     def visit_Array(self, node):
         data_type = self.visit(node.data_type)
@@ -94,7 +97,8 @@ class Interpreter():
         if data_type.value in self.CURRENT_SCOPE.DATA_TYPES.keys():
             return data_type.value
         else:
-            raise TypeError('TYPE ' + data_type.value + ' has not been initialized')
+            raise TypeError('TYPE ' + data_type.value +
+                            ' has not been initialized')
 
     def visit_Dimensions(self, dimensions):
         dimension_list = []
@@ -114,22 +118,45 @@ class Interpreter():
     # START: Variable Assignment
 
     def visit_Assignment(self, node):
-        var_name = self.visit(node.variable)
+        variable = self.visit(node.variable)
         value = self.visit(node.expression)
-        type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name)
-        if type != None:
-            self.check_type(type, value, var_name)
-            self.CURRENT_SCOPE.add(var_name, value)
-            for parameter in self.CURRENT_SCOPE.parameters:
-                # FIXME September 17, 2019: This does not work for BYREF values
-                if parameter[0].value == 'BYREF' and parameter[1] == var_name:
-                    if self.CURRENT_SCOPE.PARENT_SCOPE.VALUES.get(var_name) != None:
-                        self.CURRENT_SCOPE.PARENT_SCOPE.add(var_name, value)
-                    else:
-                        raise ReferenceError(repr(var_name))
 
+        if type(variable) != list:
+            data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(variable)
+            if data_type != None:
+                self.check_type(data_type, value, variable)
+                self.CURRENT_SCOPE.add(variable, value)
+            else:
+                raise NameError(repr(variable))
         else:
-            raise NameError(repr(var_name))
+            data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(variable[0])
+            if data_type != None:
+                self.check_type(data_type.data_type, value, variable[0])
+
+                dimensions = variable[1]
+
+                # Checks if the number of dimensions(rank) of both arrays is the same
+                if len(dimensions) != len(data_type.dimensions):
+                    raise IndexError(repr(variable[0]))
+
+                # Checks if the index is within upper and lower bound limits
+                for i in range(len(dimensions)):
+                    if dimensions[i] < data_type.dimensions[i][0] or dimensions[i] > data_type.dimensions[i][1]:
+                        raise IndexError(repr(variable[0]))
+
+                self.CURRENT_SCOPE.add(variable[0], {value: variable[1]})
+
+            else:
+                raise NameError(repr(variable))
+
+            # FIXME September 3, 2019: This does not work for BYREF values
+
+            # for parameter in self.CURRENT_SCOPE.parameters:
+                # if parameter[0].value == 'BYREF' and parameter[1] == var_name:
+                #     if self.CURRENT_SCOPE.PARENT_SCOPE.VALUES.get(var_name) != None:
+                #         self.CURRENT_SCOPE.PARENT_SCOPE.add(var_name, value)
+                #     else:
+                #         raise ReferenceError(repr(var_name))
 
     def visit_VariableValue(self, node):
         var_name = node.value
@@ -150,7 +177,10 @@ class Interpreter():
        for index in node.indexes:
            indexes.append(self.visit(index))
 
-       return var_name, indexes
+       return [var_name, indexes]
+
+    def visit_Index(self, node):
+        return self.visit(node.index)
 
     # END: Variable Assignment
 
@@ -239,7 +269,7 @@ class Interpreter():
         elif comparison == '<>':
             return self.visit(node.left) != self.visit(node.right)
 
-    #END: Logical
+    # END: Logical
 
     # START: Selection
 

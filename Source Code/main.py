@@ -9,6 +9,7 @@ def main():
 
     while len(line) > 0:
         line = file.readline()
+
         code += ' EOL ' + line
 
     parser = SyntaxAnalysis(code)

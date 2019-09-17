@@ -256,18 +256,19 @@ class SyntaxAnalysis():
 
         indexes = []
 
-        # FIXME July 28, 2019: Arrays do not work properly
+        if self.current_token.type == 'PARENTHESIS':
+           self.check_token_value('[')
+           indexes.append(self.index())
+           while self.current_token.type == 'COMMA':
+               self.check_token('COMMA')
+               indexes.append(self.index())
+           self.check_token_value(']')
 
-        #if self.current_token.type == 'PARENTHESIS':
-        #    self.check_token_value('[')
-        #    indexes.append(self.expression())
-        #    while self.current_token.type == 'COMMA':
-        #        self.check_token('COMMA')
-        #        indexes.append(self.expression())
-        #    self.check_token_value(']')
+            # TODO September 17, 2019: Add ElementValue AST class
+            # TODO September 17, 2019: Allow usage of assigned arrays
 
-        #    element = Element(variable, indexes)
-        #    return element
+           element = ElementValue(object, indexes)
+           return element
 
         return object
 
