@@ -149,13 +149,13 @@ class SyntaxAnalysis():
     # START: Variable Declaration
 
     def declarations(self):
-        # DECLARE variable_declarations : type
+        # DECLARE variable_declarations COLON type
         self.check_token('KEYWORD')
         declarations = Declarations(self.variable_declarations())
         return declarations
 
     def variable_declarations(self):
-        # variable_declaration
+        # variable_declaration COMMA (variable_declaration)*
 
         variables = [VariableName(self.current_token)]
         self.check_token('VARIABLE')
@@ -195,6 +195,7 @@ class SyntaxAnalysis():
             return array
 
 
+    # FIXME July 28, 2019: Arrays do not work properly
     def dimensions(self):
         # expression COLON expression (COMMA expression COLON expression)*
         dimensions = []
@@ -214,7 +215,6 @@ class SyntaxAnalysis():
 
     def bound(self):
         return Bound(self.expression())
-
 
     # END: Variable Declaration
 
@@ -242,6 +242,8 @@ class SyntaxAnalysis():
             self.check_token('VARIABLE')
             object = TypeAssignment(object, property)
 
+        # FIXME July 28, 2019: Arrays do not work properly
+
         #if self.current_token.type == 'PARENTHESIS':
         #    self.check_token_value('[')
         #    indexes.append(self.expression())
@@ -267,6 +269,8 @@ class SyntaxAnalysis():
             property = self.current_token
             self.check_token('VARIABLE')
             object = TypeAssignment(object, property)
+
+        # FIXME July 28, 2019: Arrays do not work properly
 
         #if self.current_token.type == 'PARENTHESIS':
         #    self.check_token_value('[')

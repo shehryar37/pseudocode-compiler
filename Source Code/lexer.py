@@ -18,6 +18,7 @@ class Lexer():
             'BOOLEAN': ['TRUE', 'FALSE'],
             'LOGICAL': ['AND', 'OR', 'NOT'],
             'FILE_MODE': ['READ', 'WRITE', 'APPEND']
+            # TODO July 24, 2019: Add functionality for comment blocks
         }
 
     def next_token(self):
