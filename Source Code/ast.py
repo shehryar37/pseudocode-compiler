@@ -75,6 +75,11 @@ class Bound(AST):
     def __init__(self, bound):
         self.value = bound
 
+
+class Index(AST):
+    def __init__(self, index):
+        self.index = index
+
 # END: Variable Declaration
 
 # START: Variable Assignment

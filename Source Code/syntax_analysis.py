@@ -184,7 +184,7 @@ class SyntaxAnalysis():
             data_type = DataType(token)
             return data_type
         else:
-            # ARRAY[dimensions] OF type
+            # ARRAY PARENTHESIS dimensions PARENTHESIS OF type
             self.check_token_value('[')
             dimensions = self.dimensions()
             self.check_token_value(']')
@@ -194,8 +194,6 @@ class SyntaxAnalysis():
             array = Array(dimensions, data_type)
             return array
 
-
-    # FIXME July 28, 2019: Arrays do not work properly
     def dimensions(self):
         # expression COLON expression (COMMA expression COLON expression)*
         dimensions = []
@@ -230,45 +228,33 @@ class SyntaxAnalysis():
         return assignment
 
     def variable_name(self):
-        # Also can be 'variable'. Ambiguous
+        # variable (indexes)*
         object = VariableName(self.current_token)
         self.check_token('VARIABLE')
 
         indexes = []
 
-        while self.current_token.type == 'PERIOD':
-            self.check_token('PERIOD')
-            property = self.current_token
-            self.check_token('VARIABLE')
-            object = TypeAssignment(object, property)
+        if self.current_token.type == 'PARENTHESIS':
+           self.check_token_value('[')
+           indexes.append(self.index())
+           while self.current_token.type == 'COMMA':
+               self.check_token('COMMA')
+               indexes.append(self.index())
+           self.check_token_value(']')
 
-        # FIXME July 28, 2019: Arrays do not work properly
-
-        #if self.current_token.type == 'PARENTHESIS':
-        #    self.check_token_value('[')
-        #    indexes.append(self.expression())
-        #    while self.current_token.type == 'COMMA':
-        #        self.check_token('COMMA')
-        #        indexes.append(self.expression())
-        #    self.check_token_value(']')
-
-        #    element = Element(variable, indexes)
-        #    return element
+           element = Element(object, indexes)
+           return element
 
         return object
 
+    def index(self):
+        return Index(self.expression())
+
     def variable_value(self):
-        # Also can be 'variable'. Ambiguous
         object = VariableValue(self.current_token)
         self.check_token('VARIABLE')
 
         indexes = []
-
-        while self.current_token.type == 'PERIOD':
-            self.check_token('PERIOD')
-            property = self.current_token
-            self.check_token('VARIABLE')
-            object = TypeAssignment(object, property)
 
         # FIXME July 28, 2019: Arrays do not work properly
 

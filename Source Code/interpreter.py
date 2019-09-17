@@ -1,6 +1,6 @@
 from function import BuiltInFunction
 from scope import Scope
-
+from arrays import Array
 
 class Interpreter():
     def __init__(self, parser):
@@ -82,6 +82,14 @@ class Interpreter():
     def visit_VariableDeclaration(self, declaration):
         self.CURRENT_SCOPE.SYMBOL_TABLE.add(self.visit(declaration.variable), self.visit(declaration.data_type))
 
+    def visit_Array(self, node):
+        data_type = self.visit(node.data_type)
+        dimensions = self.visit(node.dimensions)
+
+        array = Array(dimensions, data_type)
+
+        return array
+
     def visit_DataType(self, data_type):
         if data_type.value in self.CURRENT_SCOPE.DATA_TYPES.keys():
             return data_type.value
@@ -113,7 +121,7 @@ class Interpreter():
             self.check_type(type, value, var_name)
             self.CURRENT_SCOPE.add(var_name, value)
             for parameter in self.CURRENT_SCOPE.parameters:
-                # THIS DOESNT WORK PROPERLY
+                # FIXME September 17, 2019: This does not work for BYREF values
                 if parameter[0].value == 'BYREF' and parameter[1] == var_name:
                     if self.CURRENT_SCOPE.PARENT_SCOPE.VALUES.get(var_name) != None:
                         self.CURRENT_SCOPE.PARENT_SCOPE.add(var_name, value)
@@ -136,13 +144,13 @@ class Interpreter():
     def visit_VariableName(self, node):
         return node.value
 
-    # def visit_Element(self, node):
-    #    var_name = self.visit(node.variable)
-    #    indexes = []
-    #    for index in node.indexes:
-    #        indexes.append(self.visit(index))
+    def visit_Element(self, node):
+       var_name = self.visit(node.variable)
+       indexes = []
+       for index in node.indexes:
+           indexes.append(self.visit(index))
 
-    #    return var_name, indexes
+       return var_name, indexes
 
     # END: Variable Assignment
 
@@ -341,6 +349,7 @@ class Interpreter():
             self.PARENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
 
             if len(parameters) == len(self.CURRENT_SCOPE.parameters):
+                # TODO September 17, 2019: Try using foreach over here
                 for i in range(0, len(parameters)):
                     value = parameters[i]
                     var_name = self.CURRENT_SCOPE.parameters[i][1]
@@ -449,6 +458,7 @@ class Interpreter():
 
     # START: Type Declaration
 
+    '''
     def visit_TypeDeclaration(self, node):
         type_name = self.visit(node.type_name)
 
@@ -472,5 +482,6 @@ class Interpreter():
 
     def visit_TypeAssignment(self, node):
         object = self.visit(node.object)
+    '''
 
     # END: Type Declaration
