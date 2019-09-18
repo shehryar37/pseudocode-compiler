@@ -9,16 +9,27 @@ class Lexer():
         self.position = 0
         self.current_char = code[self.position]
 
+        # Contains all words(tokens) recognized by this language
         self.tokens = {
-            'KEYWORD': ['INPUT', 'OUTPUT', 'DECLARE', 'OF', 'IF', 'THEN', 'ELSEIF', 'ELSE', 'ENDIF', 'FOR', 'TO', 'STEP', 'ENDFOR', 'REPEAT', 'UNTIL', 'WHILE', 'ENDWHILE', 'CASE', 'OF', 'OTHERWISE', 'ENDCASE', 'PROCEDURE', 'ENDPROCEDURE', 'FUNCTION', 'ENDFUNCTION', 'RETURN', 'CALL', 'BYVAL', 'BYREF', 'OPENFILE', 'READFILE', 'WRITEFILE', 'CLOSEFILE', 'TYPE', 'ENDTYPE'],
-            'BUILTIN_FUNCTION': ['CHR', 'ASC', 'LENGTH', 'LEFT', 'RIGHT', 'MID', 'CONCAT', 'INT', 'MOD', 'DIV', 'LCASE', 'UCASE', 'TONUM', 'TOSTRING', 'SUBSTR', 'ONECHAR', 'CHARACTERCOUNT', 'EOF'],
-            'OPERATION': ['+', '-', '/', '*'],
-            'PARENTHESIS': ['(', ')', '{', '}', '[', ']'],
-            'COMPARISON': ['>', '<', '='],
-            'BOOLEAN': ['TRUE', 'FALSE'],
-            'LOGICAL': ['AND', 'OR', 'NOT'],
-            'FILE_MODE': ['READ', 'WRITE', 'APPEND']
-            # TODO July 24, 2019: Add functionality for comment blocks
+            'KEYWORD': ['INPUT', 'OUTPUT', 'DECLARE', 'OF', 'IF', 'THEN', 'ELSEIF',
+                        'ELSE', 'ENDIF', 'FOR', 'TO', 'STEP', 'ENDFOR', 'REPEAT',
+                        'UNTIL', 'WHILE', 'ENDWHILE', 'CASE', 'OF', 'OTHERWISE', 'ENDCASE', 'PROCEDURE', 'ENDPROCEDURE', 'FUNCTION', 'ENDFUNCTION', 'RETURN', 'CALL', 'BYVAL', 'BYREF', 'OPENFILE', 'READFILE', 'WRITEFILE', 'CLOSEFILE', 'TYPE', 'ENDTYPE'
+                        ],
+            'BUILTIN_FUNCTION': ['CHR', 'ASC', 'LENGTH', 'LEFT', 'RIGHT', 'MID',
+                                 'CONCAT', 'INT', 'MOD', 'DIV', 'LCASE', 'UCASE', 'TONUM', 'TOSTRING', 'SUBSTR', 'ONECHAR', 'CHARACTERCOUNT', 'EOF'
+                                 ],
+            'OPERATION': ['+', '-', '/', '*'
+                          ],
+            'PARENTHESIS': ['(', ')', '{', '}', '[', ']'
+                            ],
+            'COMPARISON': ['>', '<', '='
+                           ],
+            'BOOLEAN': ['TRUE', 'FALSE'
+                        ],
+            'LOGICAL': ['AND', 'OR', 'NOT'
+                        ],
+            'FILE_MODE': ['READ', 'WRITE', 'APPEND'
+                          ]
         }
 
     def next_token(self):
@@ -29,7 +40,7 @@ class Lexer():
                 return self.make_word()
             elif self.current_char.isnumeric():
                 return self.make_number()
-            elif self.current_char == '"':
+            elif self.current_char == '"' or self.current_char == "'":
                 self.advance()
                 token = Token('STRING', self.make_string())
                 self.advance()
@@ -50,6 +61,8 @@ class Lexer():
                 self.advance()
                 self.advance()
                 return Token('RANGE', '..')
+            elif self.current_char == '#':
+                self.ignore_line()
             elif self.current_char == '.':
                 self.advance()
                 return Token('PERIOD', '.')
@@ -86,7 +99,7 @@ class Lexer():
 
     def make_string(self):
         string = ''
-        while self.current_char != '"':
+        while self.current_char != '"' or self.current_char != "'":
             string += self.current_char
             self.advance()
 

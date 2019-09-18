@@ -7,7 +7,7 @@ class SyntaxAnalysis():
     def __init__(self, code):
         self.code = code
         self.lexer = Lexer(code)
-        self.current_token = self.lexer.next_token()
+        self.current_token = lexer.next_token()
 
     def block(self, end_block):
         statement_list = []
@@ -228,7 +228,7 @@ class SyntaxAnalysis():
 
     def variable_name(self):
         # variable (indexes)*
-        object = VariableName(self.current_token)
+        object_ = VariableName(self.current_token)
         self.check_token('VARIABLE')
 
         indexes = []
@@ -241,16 +241,16 @@ class SyntaxAnalysis():
                indexes.append(self.index())
            self.check_token_value(']')
 
-           element = ElementName(object, indexes)
+           element = ElementName(object_, indexes)
            return element
 
-        return object
+        return object_
 
     def index(self):
         return Index(self.expression())
 
     def variable_value(self):
-        object = VariableValue(self.current_token)
+        object_ = VariableValue(self.current_token)
         self.check_token('VARIABLE')
 
         indexes = []
@@ -266,10 +266,10 @@ class SyntaxAnalysis():
             # TODO September 17, 2019: Add ElementValue AST class
             # TODO September 17, 2019: Allow usage of assigned arrays
 
-           element = ElementValue(object, indexes)
+           element = ElementValue(object_, indexes)
            return element
 
-        return object
+        return object_
 
     # END: Variable Assignment
 

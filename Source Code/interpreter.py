@@ -2,7 +2,6 @@ from function import BuiltInFunction
 from scope import Scope
 from arrays import Array
 
-
 class Interpreter():
     def __init__(self, parser):
         self.parser = parser

@@ -10,7 +10,7 @@ def main():
 
     while len(line) > 0:
         line = file.readline()
-        code += ' EOL ' + line
+        code += ' \n ' + line
 
     parser = SyntaxAnalysis(code)
     interpreter = Interpreter(parser)
