@@ -50,6 +50,8 @@ class Interpreter():
     # START: Operation Handling
 
     def visit_BinaryOperation(self, node):
+        # TODO September 18, 2019: Handle string concatination
+
         if node.operation.value == '+':
             return self.visit(node.left) + self.visit(node.right)
         elif node.operation.value == '-':
@@ -143,7 +145,11 @@ class Interpreter():
                     if dimensions[i] < data_type.dimensions[i][0] or dimensions[i] > data_type.dimensions[i][1]:
                         raise IndexError(repr(variable[0]))
 
-                    self.CURRENT_SCOPE.add(variable[0], {str(dimensions): value})
+
+                    if self.CURRENT_SCOPE.VALUES.get(variable[0]):
+                        self.CURRENT_SCOPE.VALUES[variable[0]][str(dimensions)] = value
+                    else:
+                        self.CURRENT_SCOPE.add(variable[0], {str(dimensions) : value})
 
             else:
                 raise NameError(repr(variable))
@@ -203,51 +209,101 @@ class Interpreter():
     # START: Input
 
     def visit_AssignInput(self, node):
-        var_name = self.visit(node.input_node).value
+        var_name = self.visit(node.input_node)
         value = input(node.input_node.input_string)
-        type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name)
 
-        if type is not None:
-            # TODO: Make this more elegant
-            if type == 'INTEGER':
-                try:
-                    value = int(value)
-                except:
-                    raise TypeError(repr(var_name))
-            if type == 'REAL':
-                try:
-                    value = float(value)
-                except:
-                    raise TypeError(repr(var_name))
-            elif type == 'BOOLEAN':
-                 try:
-                    value = bool(value)
-                 except:
-                    raise TypeError(repr(var_name))
-            elif type == 'STRING':
-                try:
-                    value = str(value)
-                except:
-                    raise TypeError(repr(var_name))
-            elif type == 'CHAR':
-                try:
-                    value = str(value)
-                    if len(value) != 1:
-                        raise(TypeError(repr(var_name)))
-                except:
-                    raise TypeError(repr(var_name))
+        if type(var_name) != list:
+            type_ = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name)
+
+            if type_ is not None:
+                if type_ == 'INTEGER':
+                    try:
+                        value = int(value)
+                    except:
+                        raise TypeError(repr(var_name))
+                if type_ == 'REAL':
+                    try:
+                        value = float(value)
+                    except:
+                        raise TypeError(repr(var_name))
+                elif type_ == 'BOOLEAN':
+                    try:
+                        value = bool(value)
+                    except:
+                        raise TypeError(repr(var_name))
+                elif type_ == 'STRING':
+                    try:
+                        value = str(value)
+                    except:
+                        raise TypeError(repr(var_name))
+                elif type_ == 'CHAR':
+                    try:
+                        value = str(value)
+                        if len(value) != 1:
+                            raise(TypeError(repr(var_name)))
+                    except:
+                        raise TypeError(repr(var_name))
 
             self.CURRENT_SCOPE.add(var_name, value)
-            for parameter in self.CURRENT_SCOPE.parameters:
-                if parameter[0].value == 'BYREF' and parameter[1] == var_name:
-                    if self.CURRENT_SCOPE.PARENT_SCOPE.VALUES.get(var_name) != None:
-                        self.CURRENT_SCOPE.PARENT_SCOPE.add(var_name, value)
+            # for parameter in self.CURRENT_SCOPE.parameters:
+            #     if parameter[0].value == 'BYREF' and parameter[1] == var_name:
+            #         if self.CURRENT_SCOPE.PARENT_SCOPE.VALUES.get(var_name) != None:
+            #             self.CURRENT_SCOPE.PARENT_SCOPE.add(var_name, value)
+            #         else:
+            #             raise ReferenceError(repr(var_name))
+        else:
+            data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name[0])
+            if data_type is not None:
+                dimensions = var_name[1]
+
+                # Checks if the number of dimensions(rank) of both arrays is the same
+                if len(dimensions) != len(data_type.dimensions):
+                    raise IndexError(repr(var_name[0]))
+
+                # Checks if the index is within upper and lower bound limits
+                for i in range(len(dimensions)):
+                    if dimensions[i] < data_type.dimensions[i][0] or dimensions[i] > data_type.dimensions[i][1]:
+                        raise IndexError(repr(var_name[0]))
+
+                    type_ = data_type.data_type
+
+                    if type_ is not None:
+                        if type_ == 'INTEGER':
+                            try:
+                                value = int(value)
+                            except:
+                                raise TypeError(repr(var_name))
+                        if type_ == 'REAL':
+                            try:
+                                value = float(value)
+                            except:
+                                raise TypeError(repr(var_name))
+                        elif type_ == 'BOOLEAN':
+                            try:
+                                value = bool(value)
+                            except:
+                                raise TypeError(repr(var_name))
+                        elif type_ == 'STRING':
+                            try:
+                                value = str(value)
+                            except:
+                                raise TypeError(repr(var_name))
+                        elif type_ == 'CHAR':
+                            try:
+                                value = str(value)
+                                if len(value) != 1:
+                                    raise(TypeError(repr(var_name)))
+                            except:
+                                raise TypeError(repr(var_name))
+
+                    if self.CURRENT_SCOPE.VALUES.get(var_name[0]):
+                        self.CURRENT_SCOPE.VALUES[var_name[0]][str(dimensions)] = value
                     else:
-                        raise ReferenceError(repr(var_name))
+                        self.CURRENT_SCOPE.add(var_name[0], {str(dimensions) : value})
 
 
     def visit_Input(self, node):
-        return node.variable
+        return self.visit(node.variable)
 
     # END: Input
 
@@ -504,30 +560,28 @@ class Interpreter():
 
     # START: Type Declaration
 
-    '''
-    def visit_TypeDeclaration(self, node):
-        type_name = self.visit(node.type_name)
+    # def visit_TypeDeclaration(self, node):
+    #     type_name = self.visit(node.type_name)
 
-        self.SCOPES[type_name] = scope = Scope(self.CURRENT_SCOPE, [], [], node.block)
+    #     self.SCOPES[type_name] = scope = Scope(self.CURRENT_SCOPE, [], [], node.block)
 
-        scope.PARENT_SCOPE = self.CURRENT_SCOPE
-        self.CURRENT_SCOPE = scope
-        self.PARENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
+    #     scope.PARENT_SCOPE = self.CURRENT_SCOPE
+    #     self.CURRENT_SCOPE = scope
+    #     self.PARENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
 
-        self.visit(scope.block)
+    #     self.visit(scope.block)
 
-        children = {'SYMBOL_TABLE' : self.CURRENT_SCOPE.SYMBOL_TABLE}
+    #     children = {'SYMBOL_TABLE' : self.CURRENT_SCOPE.SYMBOL_TABLE}
 
-        for variable in scope.SYMBOL_TABLE.SYMBOL_TABLE.keys():
-            children[variable] = None
+    #     for variable in scope.SYMBOL_TABLE.SYMBOL_TABLE.keys():
+    #         children[variable] = None
 
-        self.CURRENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
-        self.PARENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
+    #     self.CURRENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
+    #     self.PARENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
 
-        self.CURRENT_SCOPE.DATA_TYPES[type_name] = type(type_name, (), children)
+    #     self.CURRENT_SCOPE.DATA_TYPES[type_name] = type(type_name, (), children)
 
-    def visit_TypeAssignment(self, node):
-        object = self.visit(node.object)
-    '''
+    # def visit_TypeAssignment(self, node):
+    #     object = self.visit(node.object)
 
     # END: Type Declaration

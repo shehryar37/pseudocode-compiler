@@ -7,7 +7,7 @@ class SyntaxAnalysis():
     def __init__(self, code):
         self.code = code
         self.lexer = Lexer(code)
-        self.current_token = lexer.next_token()
+        self.current_token = self.lexer.next_token()
 
     def block(self, end_block):
         statement_list = []
@@ -141,7 +141,8 @@ class SyntaxAnalysis():
             self.check_token_value(')')
         elif token.type == 'VARIABLE':
             node = self.variable_value()
-
+        else:
+            raise Error().syntax_error(self.lexer.current_char, self.lexer.line_number)
         return node
 
     # END: Operation Handling
@@ -263,9 +264,6 @@ class SyntaxAnalysis():
                indexes.append(self.index())
            self.check_token_value(']')
 
-            # TODO September 17, 2019: Add ElementValue AST class
-            # TODO September 17, 2019: Allow usage of assigned arrays
-
            element = ElementValue(object_, indexes)
            return element
 
@@ -291,6 +289,19 @@ class SyntaxAnalysis():
             input_string = '> '
             var_node = VariableName(self.current_token)
             self.check_token('VARIABLE')
+
+        indexes = []
+
+        if self.current_token.type == 'PARENTHESIS' and self.current_token.value == '[':
+           self.check_token_value('[')
+           indexes.append(self.index())
+           while self.current_token.type == 'COMMA':
+               self.check_token('COMMA')
+               indexes.append(self.index())
+           self.check_token_value(']')
+
+           var_node = ElementName(var_node, indexes)
+
 
         node = Input(input_string, var_node)
         return node

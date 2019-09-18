@@ -40,7 +40,7 @@ class Lexer():
                 return self.make_word()
             elif self.current_char.isnumeric():
                 return self.make_number()
-            elif self.current_char == '"' or self.current_char == "'":
+            elif self.current_char == '"':
                 self.advance()
                 token = Token('STRING', self.make_string())
                 self.advance()
@@ -63,6 +63,7 @@ class Lexer():
                 return Token('RANGE', '..')
             elif self.current_char == '#':
                 self.ignore_line()
+                self.advance()
             elif self.current_char == '.':
                 self.advance()
                 return Token('PERIOD', '.')
@@ -99,7 +100,7 @@ class Lexer():
 
     def make_string(self):
         string = ''
-        while self.current_char != '"' or self.current_char != "'":
+        while self.current_char != '"':
             string += self.current_char
             self.advance()
 
@@ -157,3 +158,13 @@ class Lexer():
                 char += self.current_char
 
         return char
+
+    # FIXME September 18, 2019: Comments are not working
+
+    def ignore_line(self):
+        line = self.line_number
+        # Line changes after a new line
+
+        while self.line_number == line:
+            self.advance()
+            self.next_token()
