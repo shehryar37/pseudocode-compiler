@@ -62,8 +62,9 @@ class Lexer():
                 self.advance()
                 return Token('RANGE', '..')
             elif self.current_char == '#':
-                self.ignore_line()
+                token = self.ignore_line()
                 self.advance()
+                return token
             elif self.current_char == '.':
                 self.advance()
                 return Token('PERIOD', '.')
@@ -159,12 +160,12 @@ class Lexer():
 
         return char
 
-    # FIXME September 18, 2019: Comments are not working
-
     def ignore_line(self):
         line = self.line_number
         # Line changes after a new line
 
         while self.line_number == line:
             self.advance()
-            self.next_token()
+            token = self.next_token()
+
+        return token

@@ -567,7 +567,7 @@ class SyntaxAnalysis():
 
         self.check_token_value(')')
 
-        return Call(name, parameters)
+        return FunctionCall(name, parameters)
 
 
     # START: Procedure

@@ -437,7 +437,7 @@ class Interpreter():
 
     # START: Procedure/Function
 
-    def visit_Call(self, node):
+    def visit_FunctionCall(self, node):
         name = self.visit(node.name)
         scope = self.SCOPES.get(name)
 
@@ -560,28 +560,29 @@ class Interpreter():
 
     # START: Type Declaration
 
-    # def visit_TypeDeclaration(self, node):
-    #     type_name = self.visit(node.type_name)
+    def visit_TypeDeclaration(self, node):
+        type_name = self.visit(node.type_name)
 
-    #     self.SCOPES[type_name] = scope = Scope(self.CURRENT_SCOPE, [], [], node.block)
+        # Creates a new scope with the TYPE name
+        self.SCOPES[type_name] = scope = Scope(self.CURRENT_SCOPE, [], [], node.block)
 
-    #     scope.PARENT_SCOPE = self.CURRENT_SCOPE
-    #     self.CURRENT_SCOPE = scope
-    #     self.PARENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
+        # Scopes into TYPE
+        scope.PARENT_SCOPE = self.CURRENT_SCOPE
+        self.CURRENT_SCOPE = scope
+        self.PARENT_SCOPE = scope.PARENT_SCOPE
 
-    #     self.visit(scope.block)
+        self.visit(scope.block)
 
-    #     children = {'SYMBOL_TABLE' : self.CURRENT_SCOPE.SYMBOL_TABLE}
+        # Gets all the declarations within TYPE
+        children = {'SYMBOL_TABLE' : self.CURRENT_SCOPE.SYMBOL_TABLE}
 
-    #     for variable in scope.SYMBOL_TABLE.SYMBOL_TABLE.keys():
-    #         children[variable] = None
+        # Scopes out of
+        self.CURRENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
+        self.PARENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
 
-    #     self.CURRENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
-    #     self.PARENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
+        self.CURRENT_SCOPE.DATA_TYPES[type_name] = type(type_name, (), children)
 
-    #     self.CURRENT_SCOPE.DATA_TYPES[type_name] = type(type_name, (), children)
-
-    # def visit_TypeAssignment(self, node):
-    #     object = self.visit(node.object)
+    def visit_TypeAssignment(self, node):
+        object = self.visit(node.object)
 
     # END: Type Declaration
