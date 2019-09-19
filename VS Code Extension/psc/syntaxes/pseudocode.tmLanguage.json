@@ -1,0 +1,96 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Pseudocode",
+	"scopeName": "source.pseudocode",
+	"patterns": [
+		{
+			"include": "#block"
+		},
+		{
+			"include": "#comments"
+		}
+	],
+	"repository": {
+		"block": {
+			"patterns": [
+				{
+					"include": "#statements"
+				},
+				{
+					"include": "#operations"
+				}
+			]
+		},
+		"comments": {
+			"name": "comment.line.number-sign",
+			"begin": "\\#",
+			"end": "\\n"
+		},
+		"statements": {
+			"patterns": [
+				{
+					"include": "#keywords"
+				},
+				{
+					"include": "#flow"
+				},
+				{
+					"include": "#types"
+				},
+				{
+					"include": "#functions"
+				}
+			]
+		},
+		"strings": {
+			"patterns": [
+				{
+					"name": "string.quoted.double.pseudocode",
+					"begin": "\"",
+					"end": "\""
+				},
+				{
+					"name": "string.quoted.single.pseudocode",
+					"begin": "\\'",
+					"end": "\\'"
+				}
+			]
+		},
+		"keywords": {
+			"patterns": [
+				{
+					"name": "storage.type.pseudocode",
+					"match": "\\b(INPUT|OUTPUT|DECLARE|OF|PROCEDURE|ENDPROCEDURE|FUNCTION|ENDFUNCTION|RETURN|CALL|BYVAL|BYREF|OPENFILE|READFILE|WRITEFILE|CLOSEFILE|TYPE|ENDTYPE|READ|WRITE|APPEND|AND|OR|NOT')\\b"
+				}
+			]
+		},
+		"flow": {
+			"patterns": [
+				{
+					"name": "keyword.control",
+					"match": "\\b(IF|THEN|ELSEIF|ELSE|ENDIF|FOR|TO|STEP|ENDFOR|REPEAT|UNTIL|WHILE|ENDWHILE|CASE|OF|OTHERWISE|ENDCASE|TRUE|FALSE)\\b"
+				}
+			]
+		},
+		"types": {
+			"patterns": [
+				{
+					"name": "support.type",
+					"match": "\\b(INTEGER|STRING|CHAR|BOOLEAN|REAL|ARRAY)\\b"
+				}
+			]
+		},
+		"functions": {
+			"patterns": [
+				{
+					"name": "support.function",
+					"match": "\\b(CHR|ASC|LENGTH|LEFT|RIGHT|MID|CONCAT|INT|MOD|DIV|LCASE|UCASE|TONUM|TOSTRING|SUBSTR|ONECHAR|CHARACTERCOUNT|EOF)\\b"
+				}
+			]
+		},
+		"operations": {
+			"name": "keyword.operator.pseudocode",
+			"match": "[\\+\\-\\*\/]"
+		}
+	}
+}
