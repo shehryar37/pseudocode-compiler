@@ -167,15 +167,18 @@ class Interpreter():
         return node.value
 
     def visit_VariableValue(self, node):
-
         var_name = node.value
-        value = self.CURRENT_SCOPE.VALUES.get(var_name)
+
 
         if self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name) is None:
-            if value is None:
-                raise UnboundLocalError(repr(var_name))
+            raise NameError(var_name)
         else:
-            return value
+            try:
+                value = self.CURRENT_SCOPE.VALUES.get(var_name)
+                return value
+            except:
+                raise UnboundLocalError(repr(var_name))
+
 
     def visit_ElementName(self, node):
         var_name = self.visit(node.variable)
@@ -193,16 +196,22 @@ class Interpreter():
         for index in node.indexes:
            indexes.append(self.visit(index))
 
-        value = self.CURRENT_SCOPE.VALUES.get(var_name).get(str(indexes))
 
         if self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name) is None:
-            if value is None:
-                raise UnboundLocalError(repr(var_name))
+            raise NameError(var_name)
         else:
-            return value
+            try:
+                value = self.CURRENT_SCOPE.VALUES.get(var_name).get(str(indexes))
+                return value
+            except:
+                raise UnboundLocalError(repr(var_name))
+
 
     def visit_Index(self, node):
         return self.visit(node.index)
+
+    def visit_AssignArray(self, node):
+        return self.visit(node.array)
 
     # END: Variable Assignment
 

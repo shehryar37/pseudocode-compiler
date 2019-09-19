@@ -83,6 +83,8 @@ class SyntaxAnalysis():
 
     def expression(self):
         node = self.term()
+
+        # TODO September 19, 2019: Add support for array assignment (all at once)
         while self.current_token.value in ('+', '-'):
             if self.current_token.value == '+':
                 token = self.current_token
@@ -136,9 +138,25 @@ class SyntaxAnalysis():
         elif token.value == 'CALL':
             node = self.call()
         elif token.type == 'PARENTHESIS':
-            self.check_token_value('(')
-            node = self.expression()
-            self.check_token_value(')')
+            if self.current_token.value == '(':
+                self.check_token_value('(')
+                node = self.expression()
+                self.check_token_value(')')
+            else:
+
+                elements = []
+
+                self.check_token_value('[')
+                elements.append(self.expression())
+
+                while self.current_token.type == 'COMMA':
+                    self.check_token('COMMA')
+                    elements.append(self.expression())
+
+                self.check_token_value(']')
+
+                node = AssignArray(elements)
+
         elif token.type == 'VARIABLE':
             node = self.variable_value()
         else:

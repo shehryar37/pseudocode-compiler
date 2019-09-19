@@ -116,6 +116,11 @@ class ElementValue(AST):
         self.indexes = indexes
         self.value = variable.value
 
+
+class AssignArray(AST):
+    def __init__(self, array):
+        self.array = array
+
 # END: Variable Assignment
 
 # START: Input
