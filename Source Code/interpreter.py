@@ -1,6 +1,7 @@
 from function import BuiltInFunction
 from scope import Scope
 from arrays import Array
+from error import Error
 
 class Interpreter():
     def __init__(self, parser):
@@ -12,7 +13,7 @@ class Interpreter():
 
     def interpret(self):
         tree = self.parser.block(['EOF'])
-        self.parser.check_token('EOF')
+        # self.parser.check_token_value('EOF')
         self.visit(tree)
 
     def visit(self, node):
@@ -21,18 +22,13 @@ class Interpreter():
         return visitor(node)
 
     def generic_visit(self, node):
-        raise Exception('No visit_{} method'.format(type(node).__name__))
+        Error().exception('No visit_{} method'.format(type(node).__name__))
 
     def visit_function(self, node):
         method_name = node.name.value
         visitor = getattr(BuiltInFunction(self.CURRENT_SCOPE),
                           method_name, self.generic_visit)
         return visitor(node.parsed_parameters)
-
-    def check_type(self, type, value, var_name):
-        if type in self.CURRENT_SCOPE.DATA_TYPES:
-            if not isinstance(value, self.CURRENT_SCOPE.DATA_TYPES[type]):
-                raise TypeError(repr(var_name))
 
     def visit_EmptyLine(self, token):
         return None
@@ -59,11 +55,29 @@ class Interpreter():
         elif node.operation.value == '*':
             return self.visit(node.left) * self.visit(node.right)
         elif node.operation.value == '/':
-            return self.visit(node.left) / self.visit(node.right)
+
+            right = self.visit(node.right)
+
+            if right == 0:
+                Error().zero_error()
+
+            return self.visit(node.left) / right
         elif node.operation.value == 'DIV':
-            return self.visit(node.left) // self.visit(node.right)
+
+            right = self.visit(node.right)
+
+            if right == 0:
+                Error().zero_error()
+
+            return self.visit(node.left) // right
         elif node.operation.value == 'MOD':
-            return self.visit(node.left) % self.visit(node.right)
+
+            right = self.visit(node.right)
+
+            if right == 0:
+                Error().zero_error()
+
+            return self.visit(node.left) % right
 
     def visit_UnaryOperation(self, node):
         if node.op.value == '+':
@@ -98,8 +112,7 @@ class Interpreter():
         if data_type.value in self.CURRENT_SCOPE.DATA_TYPES.keys():
             return data_type.value
         else:
-            raise TypeError('TYPE ' + data_type.value +
-                            ' has not been initialized')
+            Error().type_error('TYPE {} has not been initialized'.format(data_type.value))
 
     def visit_Dimensions(self, dimensions):
         dimension_list = []
@@ -109,7 +122,14 @@ class Interpreter():
         return dimension_list
 
     def visit_Dimension(self, dimension):
-        return [self.visit(dimension.lower_bound), self.visit(dimension.upper_bound)]
+
+        lower_bound = self.visit(dimension.lower_bound)
+        upper_bound = self.visit(dimension.upper_bound)
+
+        if not upper_bound > lower_bound:
+            Error().index_error('Upper bound cannot be lesser than or equal to lower bound')
+
+        return [lower_bound, upper_bound]
 
     def visit_Bound(self, bound):
         return self.visit(bound.value)
@@ -124,11 +144,30 @@ class Interpreter():
 
         if type(variable) is not list:
             data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(variable)
-            if data_type is not None:
+            if data_type is None:
+                Error.name_error(variable)
+
+            if type(value) is not list:
                 self.check_type(data_type, value, variable)
                 self.CURRENT_SCOPE.add(variable, value)
             else:
-                raise NameError(repr(variable))
+                # FIXME September 20, 2019: Does not work for 2D+ ARRAY
+                for i in range(len(data_type.dimensions)):
+                    if len(value) == (data_type.dimensions[i][1] - data_type.dimensions[i][0] + 1):
+                        for j in range(data_type.dimensions[i][0], data_type.dimensions[i][1] + 1):
+
+                            offset = j - data_type.dimensions[i][0]
+
+                            self.check_type(
+                                 data_type.data_type, value[offset], variable)
+
+                            if self.CURRENT_SCOPE.VALUES.get(variable):
+                                self.CURRENT_SCOPE.VALUES[variable]['[{}]'.format(str(j))] = value[offset]
+                            else:
+                                self.CURRENT_SCOPE.add(
+                                    variable, {'[{}]'.format(str(j)): value[offset]})
+                    else:
+                        Error().index_error(variable)
         else:
             data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(variable[0])
             if data_type is not None:
@@ -138,21 +177,23 @@ class Interpreter():
 
                 # Checks if the number of dimensions(rank) of both arrays is the same
                 if len(dimensions) != len(data_type.dimensions):
-                    raise IndexError(repr(variable[0]))
+                    Error().index_error(variable[0])
 
                 # Checks if the index is within upper and lower bound limits
                 for i in range(len(dimensions)):
                     if dimensions[i] < data_type.dimensions[i][0] or dimensions[i] > data_type.dimensions[i][1]:
-                        raise IndexError(repr(variable[0]))
+                        Error().index_error(variable[0])
 
-
+                    # TODO September 20, 2019: Try making this elegant (remove if)
                     if self.CURRENT_SCOPE.VALUES.get(variable[0]):
-                        self.CURRENT_SCOPE.VALUES[variable[0]][str(dimensions)] = value
+                        self.CURRENT_SCOPE.VALUES[variable[0]][str(
+                            dimensions)] = value
                     else:
-                        self.CURRENT_SCOPE.add(variable[0], {str(dimensions) : value})
+                        self.CURRENT_SCOPE.add(
+                            variable[0], {str(dimensions): value})
 
             else:
-                raise NameError(repr(variable))
+                Error().name_error(variable)
 
             # FIXME September 3, 2019: This does not work for BYREF values
 
@@ -169,15 +210,7 @@ class Interpreter():
     def visit_VariableValue(self, node):
         var_name = node.value
 
-
-        if self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name) is None:
-            raise NameError(var_name)
-        else:
-            try:
-                value = self.CURRENT_SCOPE.VALUES.get(var_name)
-                return value
-            except:
-                raise UnboundLocalError(repr(var_name))
+        return self.check_declaration(var_name)
 
 
     def visit_ElementName(self, node):
@@ -211,7 +244,12 @@ class Interpreter():
         return self.visit(node.index)
 
     def visit_AssignArray(self, node):
-        return self.visit(node.array)
+        array = []
+
+        for element in node.array:
+            array.append(self.visit(element))
+
+        return array
 
     # END: Variable Assignment
 
@@ -224,34 +262,7 @@ class Interpreter():
         if type(var_name) != list:
             type_ = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name)
 
-            if type_ is not None:
-                if type_ == 'INTEGER':
-                    try:
-                        value = int(value)
-                    except:
-                        raise TypeError(repr(var_name))
-                if type_ == 'REAL':
-                    try:
-                        value = float(value)
-                    except:
-                        raise TypeError(repr(var_name))
-                elif type_ == 'BOOLEAN':
-                    try:
-                        value = bool(value)
-                    except:
-                        raise TypeError(repr(var_name))
-                elif type_ == 'STRING':
-                    try:
-                        value = str(value)
-                    except:
-                        raise TypeError(repr(var_name))
-                elif type_ == 'CHAR':
-                    try:
-                        value = str(value)
-                        if len(value) != 1:
-                            raise(TypeError(repr(var_name)))
-                    except:
-                        raise TypeError(repr(var_name))
+            self.try_type(type_, value, var_name)
 
             self.CURRENT_SCOPE.add(var_name, value)
             # for parameter in self.CURRENT_SCOPE.parameters:
@@ -267,48 +278,23 @@ class Interpreter():
 
                 # Checks if the number of dimensions(rank) of both arrays is the same
                 if len(dimensions) != len(data_type.dimensions):
-                    raise IndexError(repr(var_name[0]))
+                    Error().index_error(var_name)
 
                 # Checks if the index is within upper and lower bound limits
                 for i in range(len(dimensions)):
                     if dimensions[i] < data_type.dimensions[i][0] or dimensions[i] > data_type.dimensions[i][1]:
-                        raise IndexError(repr(var_name[0]))
+                        Error().index_error(var_name[0])
 
                     type_ = data_type.data_type
 
-                    if type_ is not None:
-                        if type_ == 'INTEGER':
-                            try:
-                                value = int(value)
-                            except:
-                                raise TypeError(repr(var_name))
-                        if type_ == 'REAL':
-                            try:
-                                value = float(value)
-                            except:
-                                raise TypeError(repr(var_name))
-                        elif type_ == 'BOOLEAN':
-                            try:
-                                value = bool(value)
-                            except:
-                                raise TypeError(repr(var_name))
-                        elif type_ == 'STRING':
-                            try:
-                                value = str(value)
-                            except:
-                                raise TypeError(repr(var_name))
-                        elif type_ == 'CHAR':
-                            try:
-                                value = str(value)
-                                if len(value) != 1:
-                                    raise(TypeError(repr(var_name)))
-                            except:
-                                raise TypeError(repr(var_name))
+                    self.try_type(type_, value, var_name)
 
                     if self.CURRENT_SCOPE.VALUES.get(var_name[0]):
                         self.CURRENT_SCOPE.VALUES[var_name[0]][str(dimensions)] = value
                     else:
                         self.CURRENT_SCOPE.add(var_name[0], {str(dimensions) : value})
+
+
 
 
     def visit_Input(self, node):
@@ -481,7 +467,7 @@ class Interpreter():
                         if reference_variable != None:
                             self.CURRENT_SCOPE.PARENT_SCOPE.VALUES[variable] = current_value
                         else:
-                            raise ReferenceError(variable)
+                            Error().reference_error(variable)
 
                 # self.CURRENT_SCOPE.VALUES.clear()
                 # self.CURRENT_SCOPE.SYMBOL_TABLE.clear()
@@ -496,7 +482,7 @@ class Interpreter():
             else:
                 raise SyntaxError('Expected ' + str(len(self.CURRENT_SCOPE.parameters)) + ' parameter(s).' + ' Got ' + str(len(parameters)) + ' parameter(s)')
         else:
-            raise NameError(name + ' does not exist')
+            Error().name_error('{} does not exist'.format(var_name))
 
     def visit_Function(self, node):
         name = self.visit(node.name)
@@ -542,12 +528,11 @@ class Interpreter():
                 try:
                     self.CURRENT_SCOPE.add(variable, file.readline())
                 except:
-                    raise Exception(file.name)
+                    Error().exception(file.name)
             else:
-                raise TypeError(repr(variable))
+                Error().type_error(variable)
         else:
-            raise NameError(repr(variable))
-
+            Error().name_error(variable)
 
     def visit_WriteFile(self, node):
         file = self.visit(node.file_name)
@@ -555,7 +540,7 @@ class Interpreter():
         try:
             file.write(line)
         except:
-            raise Exception(file.name)
+            Error().exception(file.name)
 
     def visit_CloseFile(self, node):
         file = self.visit(node.file_name)
@@ -563,7 +548,7 @@ class Interpreter():
             file.close()
             del self.CURRENT_SCOPE.VALUES[file.name]
         except:
-            raise Exception(file.name)
+            Error().exception(file.name)
 
     # END: File
 
@@ -595,3 +580,52 @@ class Interpreter():
         object = self.visit(node.object)
 
     # END: Type Declaration
+
+    # START: Helper Functions
+
+    def check_type(self, type, value, var_name):
+        if type in self.CURRENT_SCOPE.DATA_TYPES:
+            if not isinstance(value, self.CURRENT_SCOPE.DATA_TYPES[type]):
+                Error().type_error(var_name)
+
+    def try_type(self, type_, value, var_name):
+        if type_ is not None:
+            if type_ == 'INTEGER':
+                try:
+                    value = int(value)
+                except:
+                     Error().type_error(repr(var_name))
+            if type_ == 'REAL':
+                try:
+                    value = float(value)
+                except:
+                     Error().type_error(repr(var_name))
+            elif type_ == 'BOOLEAN':
+                try:
+                    value = bool(value)
+                except:
+                     Error().type_error(repr(var_name))
+            elif type_ == 'STRING':
+                try:
+                    value = str(value)
+                except:
+                     Error().type_error(repr(var_name))
+            elif type_ == 'CHAR':
+                try:
+                    value = str(value)
+                    if len(value) != 1:
+                         Error().type_error(repr(var_name))
+                except:
+                    Error().type_error(repr(var_name))
+
+    def check_declaration(self, var_name):
+        if self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name) is None:
+            Error().name_error(var_name)
+        else:
+            try:
+                value = self.CURRENT_SCOPE.VALUES.get(var_name)
+                return value
+            except:
+                Error().unbound_local_error(var_name)
+
+    # END: Helper Functions

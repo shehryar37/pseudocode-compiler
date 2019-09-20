@@ -61,7 +61,8 @@ class SyntaxAnalysis():
 
         return Statement(node)
 
-    def check_token(self, token_type):
+    # TODO September 20, 2019: Comment key functions
+    def check_token_type(self, token_type):
         if self.current_token.type == token_type:
             token = self.current_token
             self.current_token = self.lexer.next_token()
@@ -73,12 +74,12 @@ class SyntaxAnalysis():
             token = self.current_token
             self.current_token = self.lexer.next_token()
         else:
-            Error().syntax_error(self.current_token.value, self.lexer.line_number)
+            Error().token_error(self.current_token.value, self.lexer.line_number, token_value)
 
     # START: Operation Handling
 
     def output(self):
-        self.check_token('KEYWORD')
+        self.check_token_value('OUTPUT')
         return Output(self.expression())
 
     def expression(self):
@@ -88,10 +89,10 @@ class SyntaxAnalysis():
         while self.current_token.value in ('+', '-'):
             if self.current_token.value == '+':
                 token = self.current_token
-                self.check_token('OPERATION')
+                self.check_token_type('OPERATION')
             elif self.current_token.value == '-':
                 token = self.current_token
-                self.check_token('OPERATION')
+                self.check_token_type('OPERATION')
 
             node = BinaryOperation(node, token, self.term())
 
@@ -102,7 +103,7 @@ class SyntaxAnalysis():
 
         while self.current_token.value in ('*', '/'):
             token = self.current_token
-            self.check_token('OPERATION')
+            self.check_token_type('OPERATION')
 
             node = BinaryOperation(node, token, self.factor())
 
@@ -112,26 +113,26 @@ class SyntaxAnalysis():
         token = self.current_token
         if token.type == 'OPERATION':
             if token.value == '+':
-                self.check_token('OPERATION')
+                self.check_token_type('OPERATION')
                 node = UnaryOperation(token, self.factor())
             elif token.value == '-':
-                self.check_token('OPERATION')
+                self.check_token_type('OPERATION')
                 node = UnaryOperation(token, self.factor())
         elif token.type == 'INTEGER':
-            self.check_token('INTEGER')
+            self.check_token_type('INTEGER')
             node = Value(token)
         elif token.type == 'REAL':
-            self.check_token('REAL')
+            self.check_token_type('REAL')
             node = Value(token)
         elif token.type == 'BOOLEAN':
             if token.value == 'TRUE':
                 token.value = True
             elif token.value == 'FALSE':
                 token.value = False
-            self.check_token('BOOLEAN')
+            self.check_token_type('BOOLEAN')
             node = Value(token)
         elif token.type == 'STRING':
-            self.check_token('STRING')
+            self.check_token_type('STRING')
             node =  Value(token)
         elif token.type == 'BUILTIN_FUNCTION':
             node = self.builtin_function()
@@ -150,7 +151,7 @@ class SyntaxAnalysis():
                 elements.append(self.expression())
 
                 while self.current_token.type == 'COMMA':
-                    self.check_token('COMMA')
+                    self.check_token_type('COMMA')
                     elements.append(self.expression())
 
                 self.check_token_value(']')
@@ -169,7 +170,7 @@ class SyntaxAnalysis():
 
     def declarations(self):
         # DECLARE variable_declarations COLON type
-        self.check_token('KEYWORD')
+        self.check_token_value('DECLARE')
         declarations = Declarations(self.variable_declarations())
         return declarations
 
@@ -177,14 +178,14 @@ class SyntaxAnalysis():
         # variable_declaration COMMA (variable_declaration)*
 
         variables = [VariableName(self.current_token)]
-        self.check_token('VARIABLE')
+        self.check_token_type('VARIABLE')
 
         while self.current_token.type == 'COMMA':
-            self.check_token('COMMA')
+            self.check_token_type('COMMA')
             variables.append(VariableName(self.current_token))
-            self.check_token('VARIABLE')
+            self.check_token_type('VARIABLE')
 
-        self.check_token('COLON')
+        self.check_token_value(':')
 
         data_type = self.data_type()
 
@@ -197,7 +198,7 @@ class SyntaxAnalysis():
 
     def data_type(self):
         token = self.current_token
-        self.check_token('VARIABLE')
+        self.check_token_type('VARIABLE')
 
         if token.value != 'ARRAY':
             data_type = DataType(token)
@@ -209,22 +210,23 @@ class SyntaxAnalysis():
             self.check_token_value(']')
             self.check_token_value('OF')
             data_type = self.data_type()
+            return Array(dimensions, data_type)
 
-            array = Array(dimensions, data_type)
-            return array
+
+    # START: Array Declaration
 
     def dimensions(self):
         # expression COLON expression (COMMA expression COLON expression)*
         dimensions = []
         lower_bound = self.bound()
-        self.check_token('COLON')
+        self.check_token_value(':')
         upper_bound = self.bound()
         dimensions.append(Dimension(lower_bound, upper_bound))
 
         while self.current_token.type == 'COMMA':
-            self.check_token('COMMA')
+            self.check_token_type('COMMA')
             lower_bound = self.bound()
-            self.check_token('COLON')
+            self.check_token_value(':')
             upper_bound = self.bound()
             dimensions.append(Dimension(lower_bound, upper_bound))
 
@@ -233,13 +235,15 @@ class SyntaxAnalysis():
     def bound(self):
         return Bound(self.expression())
 
+    # END: Array Declaration
+
     # END: Variable Declaration
 
     # START: Variable Assignment
 
     def assignment(self):
         left = self.variable_name()
-        self.check_token('ASSIGNMENT')
+        self.check_token_value('<-')
         right = self.expression()
         assignment = Assignment(left, right)
 
@@ -248,15 +252,15 @@ class SyntaxAnalysis():
     def variable_name(self):
         # variable (indexes)*
         object_ = VariableName(self.current_token)
-        self.check_token('VARIABLE')
+        self.check_token_type('VARIABLE')
 
         indexes = []
 
-        if self.current_token.type == 'PARENTHESIS' and self.current_token.value == '[':
+        if self.current_token.value == '[':
            self.check_token_value('[')
            indexes.append(self.index())
            while self.current_token.type == 'COMMA':
-               self.check_token('COMMA')
+               self.check_token_type('COMMA')
                indexes.append(self.index())
            self.check_token_value(']')
 
@@ -270,15 +274,15 @@ class SyntaxAnalysis():
 
     def variable_value(self):
         object_ = VariableValue(self.current_token)
-        self.check_token('VARIABLE')
+        self.check_token_type('VARIABLE')
 
         indexes = []
 
-        if self.current_token.type == 'PARENTHESIS' and self.current_token.value == '[':
+        if self.current_token.value == '[':
            self.check_token_value('[')
            indexes.append(self.index())
            while self.current_token.type == 'COMMA':
-               self.check_token('COMMA')
+               self.check_token_type('COMMA')
                indexes.append(self.index())
            self.check_token_value(']')
 
@@ -292,7 +296,7 @@ class SyntaxAnalysis():
     # START: Input
 
     def assign_input(self):
-        self.check_token('KEYWORD')
+        self.check_token_value('INPUT')
 
         assign_input = AssignInput(self.input())
         return assign_input
@@ -300,21 +304,21 @@ class SyntaxAnalysis():
     def input(self):
         if self.current_token.type == 'STRING':
             input_string = self.current_token.value
-            self.check_token('STRING')
+            self.check_token_type('STRING')
             var_node = VariableName(self.current_token)
-            self.check_token('VARIABLE')
+            self.check_token_type('VARIABLE')
         else:
             input_string = '> '
             var_node = VariableName(self.current_token)
-            self.check_token('VARIABLE')
+            self.check_token_type('VARIABLE')
 
         indexes = []
 
-        if self.current_token.type == 'PARENTHESIS' and self.current_token.value == '[':
+        if self.current_token.value == '[':
            self.check_token_value('[')
            indexes.append(self.index())
            while self.current_token.type == 'COMMA':
-               self.check_token('COMMA')
+               self.check_token_type('COMMA')
                indexes.append(self.index())
            self.check_token_value(']')
 
@@ -330,7 +334,7 @@ class SyntaxAnalysis():
         node = self.logical_term()
         while self.current_token.value == 'AND':
             token = self.current_token
-            self.check_token('LOGICAL')
+            self.check_token_type('LOGICAL')
 
             node = BinaryLogicalOperation(node, token, self.logical_term())
 
@@ -341,7 +345,7 @@ class SyntaxAnalysis():
 
         while self.current_token.value == 'OR':
             token = self.current_token
-            self.check_token('LOGICAL')
+            self.check_token_type('LOGICAL')
 
             node = BinaryLogicalOperation(node, token, self.logical_factor())
 
@@ -350,7 +354,7 @@ class SyntaxAnalysis():
     def logical_factor(self):
         token = self.current_token
         if token.value == 'NOT':
-            self.check_token('LOGICAL')
+            self.check_token_type('LOGICAL')
             node = UnaryLogicalOperation(token, self.logical_factor())
         elif token.type == 'PARENTHESIS':
             self.check_token_value('(')
@@ -371,7 +375,7 @@ class SyntaxAnalysis():
         # expression COMPARISON expression
         left = self.expression()
         comparison = self.current_token
-        self.check_token('COMPARISON')
+        self.check_token_type('COMPARISON')
         right = self.expression()
 
         condition = Condition(left, comparison, right)
@@ -394,13 +398,13 @@ class SyntaxAnalysis():
         else:
             while self.current_token.type != 'COLON':
                 if self.current_token.type == 'COMMA':
-                    self.check_token('COMMA')
+                    self.check_token_type('COMMA')
                     options.append(Value(self.expression()))
 
             right = Options(options)
 
 
-        self.check_token('COLON')
+        self.check_token_type('COLON')
 
         comparison = Token('COMPARISON', '=')
 
@@ -424,12 +428,12 @@ class SyntaxAnalysis():
         # (IF|ELSEIF condition THEN
         #   block) | ELSE block
         if self.current_token.value != 'ELSE': #FIX THIS
-            self.check_token('KEYWORD')
+            self.check_token_type('KEYWORD')
             condition = self.logical_expression()
             self.check_token_value('THEN')
             block = self.block(['ELSE', 'ELSEIF', 'ENDIF'])
         else:
-            self.check_token('KEYWORD')
+            self.check_token_type('KEYWORD')
             condition = None
             block = self.block(['ENDIF'])
 
@@ -446,7 +450,7 @@ class SyntaxAnalysis():
 
         case_list = []
 
-        self.check_token('KEYWORD')
+        self.check_token_type('KEYWORD')
         self.check_token_value('OF')
         left = self.variable_name()
 
@@ -466,7 +470,7 @@ class SyntaxAnalysis():
             block = self.block(['CASE', 'OTHERWISE', 'ENDCASE'])
         else:
             condition = None
-            self.check_token('KEYWORD')
+            self.check_token_type('KEYWORD')
             block = self.block(['ENDCASE'])
 
         return SelectionStatement(condition, block)
@@ -479,22 +483,22 @@ class SyntaxAnalysis():
         # FOR VARIABLE ASSIGNMENT INTEGER TO INTEGER (STEP INTEGER)
         #   block
         # ENDFOR
-        self.check_token('KEYWORD')
+        self.check_token_type('KEYWORD')
         variable = self.variable_name()
-        self.check_token('ASSIGNMENT')
+        self.check_token_value('<-')
         start = self.expression()
         assignment = Assignment(variable, start)
         self.check_token_value('TO')
         end = self.expression()
 
         if self.current_token.value == 'STEP':
-            self.check_token('KEYWORD')
+            self.check_token_type('KEYWORD')
             step = self.expression()
         else:
             step = Value(Token('INTEGER', 1))
 
         block = self.block(['ENDFOR'])
-        self.check_token('KEYWORD')
+        self.check_token_type('KEYWORD')
 
         iteration = Iteration(variable, assignment, end, step, block)
         return iteration
@@ -507,9 +511,9 @@ class SyntaxAnalysis():
         # REPEAT
         #   block
         # UNTIL condition
-        self.check_token('KEYWORD')
+        self.check_token_type('KEYWORD')
         block = self.block(['UNTIL'])
-        self.check_token('KEYWORD')
+        self.check_token_type('KEYWORD')
         condition = self.logical_expression()
         loop = Loop(condition, block, False)
 
@@ -523,10 +527,10 @@ class SyntaxAnalysis():
         # WHILE condition
         #   block
         # ENDWHILE
-        self.check_token('KEYWORD')
+        self.check_token_type('KEYWORD')
         condition = self.logical_expression()
         block = self.block(['ENDWHILE'])
-        self.check_token('KEYWORD')
+        self.check_token_type('KEYWORD')
         loop = Loop(condition, block, True)
 
         return loop
@@ -537,7 +541,7 @@ class SyntaxAnalysis():
 
     def builtin_function(self):
         name = self.current_token
-        self.check_token('BUILTIN_FUNCTION')
+        self.check_token_type('BUILTIN_FUNCTION')
         self.check_token_value('(')
 
         parameters = []
@@ -545,7 +549,7 @@ class SyntaxAnalysis():
         while self.current_token.value != ')':
             parameters.append(self.expression())
             if self.current_token.type == 'COMMA':
-                self.check_token('COMMA')
+                self.check_token_type('COMMA')
             else:
                 break
 
@@ -559,19 +563,19 @@ class SyntaxAnalysis():
         # VARIABLE COLON DATA_TYPE
         scope_type = self.current_token
         if self.current_token.value in ['BYREF', 'BYVAL']:
-            self.check_token('KEYWORD')
+            self.check_token_type('KEYWORD')
         variable = VariableName(self.current_token)
-        self.check_token('VARIABLE')
-        self.check_token('COLON')
+        self.check_token_type('VARIABLE')
+        self.check_token_type('COLON')
         data_type = self.data_type()
 
         node = Parameter(variable, data_type, scope_type)
         return node
 
     def call(self):
-        self.check_token('KEYWORD')
+        self.check_token_type('KEYWORD')
         name = Value(self.current_token)
-        self.check_token('VARIABLE')
+        self.check_token_type('VARIABLE')
         self.check_token_value('(')
 
         parameters = []
@@ -579,7 +583,7 @@ class SyntaxAnalysis():
         while self.current_token.value != ')':
             parameters.append(self.expression())
             if self.current_token.type == 'COMMA':
-                self.check_token('COMMA')
+                self.check_token_type('COMMA')
             else:
                 break
 
@@ -591,9 +595,9 @@ class SyntaxAnalysis():
     # START: Procedure
 
     def procedure(self):
-        self.check_token('KEYWORD')
+        self.check_token_type('KEYWORD')
         name = Value(self.current_token)
-        self.check_token('VARIABLE')
+        self.check_token_type('VARIABLE')
         self.check_token_value('(')
 
         parameters = []
@@ -601,13 +605,13 @@ class SyntaxAnalysis():
         while self.current_token.value != ')':
             parameters.append(self.parameter())
             if self.current_token.type == 'COMMA':
-                self.check_token('COMMA')
+                self.check_token_type('COMMA')
             else:
                 break
 
         self.check_token_value(')')
         node = Function(name, parameters, self.block(['ENDPROCEDURE']), None)
-        self.check_token('KEYWORD')
+        self.check_token_type('KEYWORD')
 
         return node
 
@@ -616,9 +620,9 @@ class SyntaxAnalysis():
     # START: Function
 
     def function(self):
-        self.check_token('KEYWORD')
+        self.check_token_type('KEYWORD')
         name = Value(self.current_token)
-        self.check_token('VARIABLE')
+        self.check_token_type('VARIABLE')
         self.check_token_value('(')
 
         parameters = []
@@ -626,22 +630,22 @@ class SyntaxAnalysis():
         while self.current_token.value != ')':
             parameters.append(self.parameter())
             if self.current_token.type == 'COMMA':
-                self.check_token('COMMA')
+                self.check_token_type('COMMA')
             else:
                 break
 
         self.check_token_value(')')
-        self.check_token('COLON')
+        self.check_token_type('COLON')
 
         return_type = self.data_type()
 
         node = Function(name, parameters, self.block(['ENDFUNCTION']), return_type)
-        self.check_token('KEYWORD')
+        self.check_token_type('KEYWORD')
 
         return node
 
     def return_value(self):
-        self.check_token('KEYWORD')
+        self.check_token_type('KEYWORD')
         return self.expression()
 
     # END: Function
@@ -649,38 +653,38 @@ class SyntaxAnalysis():
     # START: File
 
     def open_file(self):
-        self.check_token('KEYWORD')
+        self.check_token_type('KEYWORD')
         file_name = Value(self.current_token)
-        self.check_token('STRING')
+        self.check_token_type('STRING')
         self.check_token_value('FOR')
         file_mode = FileMode(self.current_token)
-        self.check_token('FILE_MODE')
+        self.check_token_type('FILE_MODE')
 
         return File(file_name, file_mode)
 
     def read_file(self):
-        self.check_token('KEYWORD')
+        self.check_token_type('KEYWORD')
         file_name = VariableValue(self.current_token)
-        self.check_token('STRING')
-        self.check_token('COMMA')
+        self.check_token_type('STRING')
+        self.check_token_type('COMMA')
         variable = VariableName(self.current_token)
-        self.check_token('VARIABLE')
+        self.check_token_type('VARIABLE')
 
         return ReadFile(file_name, variable)
 
     def write_file(self):
-        self.check_token('KEYWORD')
+        self.check_token_type('KEYWORD')
         file_name = VariableValue(self.current_token)
-        self.check_token('STRING')
-        self.check_token('COMMA')
+        self.check_token_type('STRING')
+        self.check_token_type('COMMA')
         line = self.expression()
 
         return WriteFile(file_name, line)
 
     def close_file(self):
-        self.check_token('KEYWORD')
+        self.check_token_type('KEYWORD')
         file_name = VariableName(self.current_token)
-        self.check_token('STRING')
+        self.check_token_type('STRING')
 
         return CloseFile(file_name)
 
@@ -689,11 +693,11 @@ class SyntaxAnalysis():
     # START: Type
 
     def declare_type(self):
-        self.check_token('KEYWORD')
+        self.check_token_type('KEYWORD')
         type_name = Value(self.current_token)
-        self.check_token('VARIABLE')
+        self.check_token_type('VARIABLE')
         block = self.block(['ENDTYPE'])
-        self.check_token('KEYWORD')
+        self.check_token_type('KEYWORD')
 
         return TypeDeclaration(type_name, block)
 
