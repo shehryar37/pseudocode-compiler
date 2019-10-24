@@ -1,4 +1,5 @@
 # Pseudo
+![GitHub repo size](https://img.shields.io/github/repo-size/shehryar37/pseudocode-compiler)
 
 Pseudo is a translator that allows CAIE students to practice writing code on a computer instead of on paper.
 
