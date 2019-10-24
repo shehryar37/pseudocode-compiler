@@ -38,4 +38,4 @@ class Error(object):
         raise UnboundLocalError(repr(text))
 
     def reference_error(self, text):
-        raise RecursionError(repr(text))
+        raise ReferenceError(repr(text))

@@ -85,7 +85,6 @@ class SyntaxAnalysis():
     def expression(self):
         node = self.term()
 
-        # TODO September 19, 2019: Add support for array assignment (all at once)
         while self.current_token.value in ('+', '-'):
             if self.current_token.value == '+':
                 token = self.current_token
@@ -157,7 +156,6 @@ class SyntaxAnalysis():
                 self.check_token_value(']')
 
                 node = AssignArray(elements)
-
         elif token.type == 'VARIABLE':
             node = self.variable_value()
         else:
@@ -264,8 +262,12 @@ class SyntaxAnalysis():
                indexes.append(self.index())
            self.check_token_value(']')
 
-           element = ElementName(object_, indexes)
-           return element
+           object_ = ElementName(object_, indexes)
+
+        if self.current_token.value == '.':
+            self.check_token_type('PERIOD')
+            object_ = TypeName(object_, self.variable_name())
+
 
         return object_
 
@@ -286,8 +288,11 @@ class SyntaxAnalysis():
                indexes.append(self.index())
            self.check_token_value(']')
 
-           element = ElementValue(object_, indexes)
-           return element
+           object_ = ElementValue(object_, indexes)
+
+        if self.current_token.value == '.':
+            self.check_token_type('PERIOD')
+            object_ = TypeValue(object_, self.variable_name())
 
         return object_
 

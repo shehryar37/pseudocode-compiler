@@ -311,9 +311,15 @@ class TypeDeclaration(AST):
         self.block = block
 
 
-class TypeAssignment(AST):
-    def __init__(self, object, property):
-        self.variable = variable
-        self.property = property
+class TypeName(AST):
+    def __init__(self, object_, property_):
+        self.object_ = object_
+        self.property_ = property_
 
-# END: Type
+
+class TypeValue(AST):
+    def __init__(self, object_, property_):
+        self.object_ = object_
+        self.property_ = property_
+
+ # END: Type

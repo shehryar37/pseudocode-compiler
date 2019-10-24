@@ -100,14 +100,6 @@ class Interpreter():
         self.CURRENT_SCOPE.SYMBOL_TABLE.add(self.visit(
             declaration.variable), self.visit(declaration.data_type))
 
-    def visit_Array(self, node):
-        data_type = self.visit(node.data_type)
-        dimensions = self.visit(node.dimensions)
-
-        array = Array(dimensions, data_type)
-
-        return array
-
     def visit_DataType(self, data_type):
         if data_type.value in self.CURRENT_SCOPE.DATA_TYPES.keys():
             return data_type.value
@@ -120,6 +112,18 @@ class Interpreter():
             dimension_list.append(self.visit(dimension))
 
         return dimension_list
+
+    # END: Variable Declaration
+
+    # START: Array Declaration
+
+    def visit_Array(self, node):
+        data_type = self.visit(node.data_type)
+        dimensions = self.visit(node.dimensions)
+
+        array = Array(dimensions, data_type)
+
+        return array
 
     def visit_Dimension(self, dimension):
 
@@ -134,7 +138,37 @@ class Interpreter():
     def visit_Bound(self, bound):
         return self.visit(bound.value)
 
-    # END: Variable Declaration
+    # END: Array Declaration
+
+    # START: Type Declaration
+
+    def visit_TypeDeclaration(self, node):
+        type_name = self.visit(node.type_name)
+
+        # Creates a new scope with the TYPE name
+        self.SCOPES[type_name] = scope = Scope(self.CURRENT_SCOPE, [], [], node.block)
+
+        # Scopes into TYPE
+        scope.PARENT_SCOPE = self.CURRENT_SCOPE
+        self.CURRENT_SCOPE = scope
+        self.PARENT_SCOPE = scope.PARENT_SCOPE
+
+        self.visit(scope.block)
+
+        # Gets all the declarations within TYPE
+        children = {'SYMBOL_TABLE' : self.CURRENT_SCOPE.SYMBOL_TABLE}
+
+        # Scopes out of TYPE
+        self.CURRENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
+        self.PARENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
+
+        self.CURRENT_SCOPE.DATA_TYPES[type_name] = type(type_name, (), children)
+
+    def visit_TypeAssignment(self, node):
+        self.visit(node.object)
+        # TODO September 25, 2019: Complete this piece of code
+
+    # END: Type Declaration
 
     # START: Variable Assignment
 
@@ -212,6 +246,9 @@ class Interpreter():
 
         return self.check_declaration(var_name)
 
+    # END: Variable Assignment
+
+    # START: Array Assignment
 
     def visit_ElementName(self, node):
         var_name = self.visit(node.variable)
@@ -251,7 +288,20 @@ class Interpreter():
 
         return array
 
-    # END: Variable Assignment
+    # END: Array Assignment
+
+    # START: Type Assignment
+
+    def visit_TypeName(self, node):
+        object_ = self.visit(node.object_)
+        property_ = self.visit(node.property_)
+
+        return [object_, property_]
+
+    def visit_TypeValue(self, node):
+        pass
+
+    # END: Type Assignment
 
     # START: Input
 
@@ -265,6 +315,7 @@ class Interpreter():
             self.try_type(type_, value, var_name)
 
             self.CURRENT_SCOPE.add(var_name, value)
+
             # for parameter in self.CURRENT_SCOPE.parameters:
             #     if parameter[0].value == 'BYREF' and parameter[1] == var_name:
             #         if self.CURRENT_SCOPE.PARENT_SCOPE.VALUES.get(var_name) != None:
@@ -551,35 +602,6 @@ class Interpreter():
             Error().exception(file.name)
 
     # END: File
-
-    # START: Type Declaration
-
-    def visit_TypeDeclaration(self, node):
-        type_name = self.visit(node.type_name)
-
-        # Creates a new scope with the TYPE name
-        self.SCOPES[type_name] = scope = Scope(self.CURRENT_SCOPE, [], [], node.block)
-
-        # Scopes into TYPE
-        scope.PARENT_SCOPE = self.CURRENT_SCOPE
-        self.CURRENT_SCOPE = scope
-        self.PARENT_SCOPE = scope.PARENT_SCOPE
-
-        self.visit(scope.block)
-
-        # Gets all the declarations within TYPE
-        children = {'SYMBOL_TABLE' : self.CURRENT_SCOPE.SYMBOL_TABLE}
-
-        # Scopes out of
-        self.CURRENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
-        self.PARENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
-
-        self.CURRENT_SCOPE.DATA_TYPES[type_name] = type(type_name, (), children)
-
-    def visit_TypeAssignment(self, node):
-        object = self.visit(node.object)
-
-    # END: Type Declaration
 
     # START: Helper Functions
 
