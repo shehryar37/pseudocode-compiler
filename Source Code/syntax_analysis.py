@@ -3,6 +3,7 @@ from error import Error
 from ast import *
 from tokens import Token
 
+
 class SyntaxAnalysis():
     def __init__(self, code):
         self.code = code
@@ -86,12 +87,9 @@ class SyntaxAnalysis():
         node = self.term()
 
         while self.current_token.value in ('+', '-'):
-            if self.current_token.value == '+':
-                token = self.current_token
-                self.check_token_type('OPERATION')
-            elif self.current_token.value == '-':
-                token = self.current_token
-                self.check_token_type('OPERATION')
+            # TODO: This can be simplified (no if statement needed)
+            token = self.current_token
+            self.check_token_type('OPERATION')
 
             node = BinaryOperation(node, token, self.term())
 
@@ -100,7 +98,7 @@ class SyntaxAnalysis():
     def term(self):
         node = self.factor()
 
-        while self.current_token.value in ('*', '/'):
+        while self.current_token.value in ('*', '/', 'DIV', 'MOD', '^'):
             token = self.current_token
             self.check_token_type('OPERATION')
 

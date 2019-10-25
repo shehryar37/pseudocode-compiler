@@ -16,9 +16,9 @@ class Lexer():
                         'UNTIL', 'WHILE', 'ENDWHILE', 'CASE', 'OF', 'OTHERWISE', 'ENDCASE', 'PROCEDURE', 'ENDPROCEDURE', 'FUNCTION', 'ENDFUNCTION', 'RETURN', 'CALL', 'BYVAL', 'BYREF', 'OPENFILE', 'READFILE', 'WRITEFILE', 'CLOSEFILE', 'TYPE', 'ENDTYPE'
                         ],
             'BUILTIN_FUNCTION': ['CHR', 'ASC', 'LENGTH', 'LEFT', 'RIGHT', 'MID',
-                                 'CONCAT', 'INT', 'MOD', 'DIV', 'LCASE', 'UCASE', 'TONUM', 'TOSTRING', 'SUBSTR', 'ONECHAR', 'CHARACTERCOUNT', 'EOF'
+                                 'CONCAT', 'INT', 'LCASE', 'UCASE', 'TONUM', 'TOSTRING', 'SUBSTR', 'ONECHAR', 'CHARACTERCOUNT', 'EOF'
                                  ],
-            'OPERATION': ['+', '-', '/', '*'
+            'OPERATION': ['+', '-', '/', '*', 'DIV', 'MOD', '^'
                           ],
             'PARENTHESIS': ['(', ')', '{', '}', '[', ']'
                             ],

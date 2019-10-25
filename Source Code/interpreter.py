@@ -46,7 +46,6 @@ class Interpreter():
     # START: Operation Handling
 
     def visit_BinaryOperation(self, node):
-        # TODO September 18, 2019: Handle string concatination
 
         if node.operation.value == '+':
             return self.visit(node.left) + self.visit(node.right)
@@ -78,6 +77,9 @@ class Interpreter():
                 Error().zero_error()
 
             return self.visit(node.left) % right
+
+        elif node.operation.value == '^':
+            return self.visit(node.left) ** self.visit(node.right)
 
     def visit_UnaryOperation(self, node):
         if node.op.value == '+':

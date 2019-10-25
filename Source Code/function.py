@@ -67,15 +67,17 @@ class BuiltInFunction():
         if self.check_function('INT', parameters, 1, [float]):
             return int(parameters[0])
 
-    def MOD(self, parameters):
-        # MOD(ThisNum : INTEGER, ThisDiv : INTEGER) RETURNS INTEGER
-        if self.check_function('MOD', parameters, 2, [int, int]):
-            return parameters[0] % parameters[1]
+    # FIXME: Causing problems with operations DIV and MOD
 
-    def DIV(self, parameters):
-        # DIV(ThisNum : INTEGER, ThisDiv : INTEGER) RETURNS INTEGER
-        if self.check_function('DIV', parameters, 2, [int, int]):
-            return parameters[0] // parameters[1]
+    # def MOD(self, parameters):
+    #     # MOD(ThisNum : INTEGER, ThisDiv : INTEGER) RETURNS INTEGER
+    #     if self.check_function('MOD', parameters, 2, [int, int]):
+    #         return parameters[0] % parameters[1]
+
+    # def DIV(self, parameters):
+    #     # DIV(ThisNum : INTEGER, ThisDiv : INTEGER) RETURNS INTEGER
+    #     if self.check_function('DIV', parameters, 2, [int, int]):
+    #         return parameters[0] // parameters[1]
 
     def LCASE(self, parameters):
         # LCASE(x : CHAR) RETURNS CHAR
