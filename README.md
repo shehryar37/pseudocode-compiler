@@ -3,16 +3,6 @@
 
 Pseudo is a translator that allows CAIE students to practice writing code on a computer instead of on paper.
 
-## New Features!
-
-  - ARRAY can now dynamically be assigned!
-  - TYPE can be implemented
-
-
-You can also:
-  - Learn pseudocode through trial and error
-  - Copy/paste pseudocode code online and check if it works
-
 ### Requirements
 
 Pseudo translates pseudocode to Python, therefore the following are necessary:
