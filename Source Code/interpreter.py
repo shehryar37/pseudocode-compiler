@@ -314,7 +314,7 @@ class Interpreter():
         if type(var_name) != list:
             type_ = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name)
 
-            self.try_type(type_, value, var_name)
+            value = self.try_type(type_, value, var_name)
 
             self.CURRENT_SCOPE.add(var_name, value)
 
@@ -366,10 +366,13 @@ class Interpreter():
 
     def visit_BinaryLogicalOperation(self, node):
         if node.logical_operation.value == 'AND':
-            return self.visit(node.left) and self.visit(node.right)
+            left = self.visit(node.left)
+            right = self.visit(node.right)
+            return left and right
         elif node.logical_operation.value == 'OR':
-            return self.visit(node.left) - self.visit(node.right)
-
+            left = self.visit(node.left)
+            right = self.visit(node.right)
+            return left or right
     def visit_UnaryLogicalOperation(self, node):
             return not self.visit(node.condition)
 
@@ -377,7 +380,11 @@ class Interpreter():
         comparison = node.comparison.value
 
         if comparison == '=':
-            return self.visit(node.left) in self.visit(node.right)
+            right = self.visit(node.right)
+            if isinstance(right, list):
+                return self.visit(node.left) in right
+            else:
+                return self.visit(node.left) == right
         elif comparison == '<':
             return self.visit(node.left) < self.visit(node.right)
         elif comparison == '>':
@@ -641,6 +648,9 @@ class Interpreter():
                          Error().type_error(repr(var_name))
                 except:
                     Error().type_error(repr(var_name))
+
+            return value
+
 
     def check_declaration(self, var_name):
         if self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name) is None:

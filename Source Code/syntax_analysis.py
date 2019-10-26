@@ -87,7 +87,6 @@ class SyntaxAnalysis():
         node = self.term()
 
         while self.current_token.value in ('+', '-'):
-            # TODO: This can be simplified (no if statement needed)
             token = self.current_token
             self.check_token_type('OPERATION')
 
@@ -384,36 +383,6 @@ class SyntaxAnalysis():
         condition = Condition(left, comparison, right)
         return condition
 
-    def case_condition(self, left):
-        # variable (TO, .., ,) expression
-
-        options = []
-        options.append(self.expression())
-
-        if self.current_token.value == 'TO' or self.current_token.value == '..':
-            if self.current_token.value == 'TO':
-                self.check_token_value('TO')
-            else:
-                self.check_token_value('..')
-            start = options[-1]
-            del options[-1]
-            right = Range(start, self.expression())
-        else:
-            while self.current_token.type != 'COLON':
-                if self.current_token.type == 'COMMA':
-                    self.check_token_type('COMMA')
-                    options.append(Value(self.expression()))
-
-            right = Options(options)
-
-
-        self.check_token_type('COLON')
-
-        comparison = Token('COMPARISON', '=')
-
-        condition = Condition(left, comparison, right)
-        return condition
-
     # START: Selection
 
     def selection(self):
@@ -430,7 +399,7 @@ class SyntaxAnalysis():
     def selection_statement(self):
         # (IF|ELSEIF condition THEN
         #   block) | ELSE block
-        if self.current_token.value != 'ELSE': #FIX THIS
+        if self.current_token.value != 'ELSE': # FIX THIS
             self.check_token_type('KEYWORD')
             condition = self.logical_expression()
             self.check_token_value('THEN')
@@ -455,7 +424,7 @@ class SyntaxAnalysis():
 
         self.check_token_type('KEYWORD')
         self.check_token_value('OF')
-        left = self.variable_name()
+        left = self.variable_value()
 
         while self.current_token.value != 'ENDCASE':
             case_list.append(self.case_statement(left))
@@ -477,6 +446,38 @@ class SyntaxAnalysis():
             block = self.block(['ENDCASE'])
 
         return SelectionStatement(condition, block)
+
+    def case_condition(self, left):
+        # variable (TO, .., ,) expression
+
+        options = []
+        options.append(self.expression())
+
+        # FIXME October 25, 2019: Does not work for ASCII ranges
+
+        if self.current_token.value == 'TO' or self.current_token.value == '..':
+            if self.current_token.value == 'TO':
+                self.check_token_value('TO')
+            else:
+                self.check_token_value('..')
+            start = options[-1]
+            del options[-1]
+            right = Range(start, self.expression())
+        else:
+            while self.current_token.type != 'COLON':
+                if self.current_token.type == 'COMMA':
+                    self.check_token_type('COMMA')
+                    options.append(self.expression())
+
+            right = Options(options)
+
+
+        self.check_token_type('COLON')
+
+        comparison = Token('COMPARISON', '=')
+
+        condition = Condition(left, comparison, right)
+        return condition
 
     # END: Case
 

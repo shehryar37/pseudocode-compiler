@@ -67,7 +67,7 @@ class BuiltInFunction():
         if self.check_function('INT', parameters, 1, [float]):
             return int(parameters[0])
 
-    # FIXME: Causing problems with operations DIV and MOD
+    # FIXME October 25, 2019: Causing problems with operations DIV and MOD
 
     # def MOD(self, parameters):
     #     # MOD(ThisNum : INTEGER, ThisDiv : INTEGER) RETURNS INTEGER
