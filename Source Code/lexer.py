@@ -63,7 +63,6 @@ class Lexer():
                 return Token('RANGE', '..')
             elif self.current_char == '#':
                 token = self.ignore_line()
-                self.advance()
                 return token
             elif self.current_char == '.':
                 self.advance()
@@ -162,6 +161,7 @@ class Lexer():
 
     def ignore_line(self):
         line = self.line_number
+
         # Line changes after a new line
 
         while self.line_number == line:
