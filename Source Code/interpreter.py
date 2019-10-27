@@ -1,7 +1,7 @@
 from function import BuiltInFunction
 from scope import Scope
-from arrays import Array
 from error import Error
+from symbol_table import *
 
 class Interpreter():
     def __init__(self, parser):
@@ -99,21 +99,17 @@ class Interpreter():
             self.visit(declaration)
 
     def visit_VariableDeclaration(self, declaration):
-        self.CURRENT_SCOPE.SYMBOL_TABLE.add(self.visit(
-            declaration.variable), self.visit(declaration.data_type))
+        var_name = self.visit(declaration.variable)
+
+        variable_metadata = Variable(self.visit(declaration.data_type))
+
+        self.CURRENT_SCOPE.SYMBOL_TABLE.add(var_name, variable_metadata)
 
     def visit_DataType(self, data_type):
         if data_type.value in self.CURRENT_SCOPE.DATA_TYPES.keys():
             return data_type.value
         else:
             Error().type_error('TYPE {} has not been initialized'.format(data_type.value))
-
-    def visit_Dimensions(self, dimensions):
-        dimension_list = []
-        for dimension in dimensions.dimensions:
-            dimension_list.append(self.visit(dimension))
-
-        return dimension_list
 
     # END: Variable Declaration
 
@@ -126,6 +122,13 @@ class Interpreter():
         array = Array(dimensions, data_type)
 
         return array
+
+    def visit_Dimensions(self, dimensions):
+        dimension_list = []
+        for dimension in dimensions.dimensions:
+            dimension_list.append(self.visit(dimension))
+
+        return dimension_list
 
     def visit_Dimension(self, dimension):
 
@@ -175,17 +178,17 @@ class Interpreter():
     # START: Variable Assignment
 
     def visit_Assignment(self, node):
-        variable = self.visit(node.variable)
+        var_name = self.visit(node.variable)
         value = self.visit(node.expression)
 
-        if type(variable) is not list:
-            data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(variable)
+        if type(var_name) is not list:
+            data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name)
             if data_type is None:
-                Error.name_error(variable)
+                Error.name_error(var_name)
 
             if type(value) is not list:
-                self.check_type(data_type, value, variable)
-                self.CURRENT_SCOPE.add(variable, value)
+                self.check_type(data_type, value, var_name)
+                self.CURRENT_SCOPE.add(var_name, value)
             else:
                 # FIXME September 20, 2019: Does not work for 2D+ ARRAY
                 for i in range(len(data_type.dimensions)):
@@ -195,41 +198,41 @@ class Interpreter():
                             offset = j - data_type.dimensions[i][0]
 
                             self.check_type(
-                                 data_type.data_type, value[offset], variable)
+                                 data_type.data_type, value[offset], var_name)
 
-                            if self.CURRENT_SCOPE.VALUES.get(variable):
+                            if self.CURRENT_SCOPE.VALUES.get(var_name):
                                 self.CURRENT_SCOPE.VALUES[variable]['[{}]'.format(str(j))] = value[offset]
                             else:
                                 self.CURRENT_SCOPE.add(
-                                    variable, {'[{}]'.format(str(j)): value[offset]})
+                                    var_name, {'[{}]'.format(str(j)): value[offset]})
                     else:
-                        Error().index_error(variable)
+                        Error().index_error(var_name)
         else:
-            data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(variable[0])
+            data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name[0])
             if data_type is not None:
-                self.check_type(data_type.data_type, value, variable[0])
+                self.check_type(data_type.data_type, value, var_name[0])
 
-                dimensions = variable[1]
+                dimensions = var_name[1]
 
                 # Checks if the number of dimensions(rank) of both arrays is the same
                 if len(dimensions) != len(data_type.dimensions):
-                    Error().index_error(variable[0])
+                    Error().index_error(var_name[0])
 
                 # Checks if the index is within upper and lower bound limits
                 for i in range(len(dimensions)):
                     if dimensions[i] < data_type.dimensions[i][0] or dimensions[i] > data_type.dimensions[i][1]:
-                        Error().index_error(variable[0])
+                        Error().index_error(var_name[0])
 
                     # TODO September 20, 2019: Try making this elegant (remove if)
-                    if self.CURRENT_SCOPE.VALUES.get(variable[0]):
+                    if self.CURRENT_SCOPE.VALUES.get(var_name[0]):
                         self.CURRENT_SCOPE.VALUES[variable[0]][str(
                             dimensions)] = value
                     else:
                         self.CURRENT_SCOPE.add(
-                            variable[0], {str(dimensions): value})
+                            var_name[0], {str(dimensions): value})
 
             else:
-                Error().name_error(variable)
+                Error().name_error(var_name)
 
             # FIXME September 3, 2019: This does not work for BYREF values
 
@@ -346,9 +349,6 @@ class Interpreter():
                         self.CURRENT_SCOPE.VALUES[var_name[0]][str(dimensions)] = value
                     else:
                         self.CURRENT_SCOPE.add(var_name[0], {str(dimensions) : value})
-
-
-
 
     def visit_Input(self, node):
         return self.visit(node.variable)
@@ -483,13 +483,6 @@ class Interpreter():
 
     # END: Built-in Function
 
-    def visit_Parameter(self, node):
-        variable = self.visit(node.variable)
-        data_type = self.visit(node.data_type)
-        scope_type = node.scope_type
-
-        return variable, data_type, scope_type
-
     # START: Procedure/Function
 
     def visit_FunctionCall(self, node):
@@ -506,10 +499,19 @@ class Interpreter():
             self.PARENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
 
             if len(parameters) == len(self.CURRENT_SCOPE.parameters):
-                # TODO September 17, 2019: Try using foreach over here
                 for i in range(0, len(parameters)):
                     value = parameters[i]
+                    reference_type = self.CURRENT_SCOPE.parameters[i][0]
                     var_name = self.CURRENT_SCOPE.parameters[i][1]
+
+                    if reference_type == 'BYREF':
+                        try:
+                            parent_name = node.parameters[i].value
+                        except:
+                            Error().reference_error('A variable must be passed into BYREF')
+
+                        self.CURRENT_SCOPE.SYMBOL_TABLE.SYMBOL_TABLE[var_name].parent_name = parent_name
+
                     type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name)
                     self.check_type(type, value, var_name)
                     self.CURRENT_SCOPE.add(var_name, parameters[i])
@@ -517,37 +519,32 @@ class Interpreter():
                 return_value = self.visit(self.CURRENT_SCOPE.block)
 
                 for parameter in self.CURRENT_SCOPE.parameters:
-                    scope_type = parameter[0]
-                    variable = parameter[1]
-                    # Figure this out
-                    if scope_type == 'BYREF':
-                        current_value = self.CURRENT_SCOPE.VALUES.get(variable)
-                        reference_variable = self.CURRENT_SCOPE.PARENT_SCOPE.VALUES.get(variable)
+                    reference_type = parameter[0]
+                    var_name = parameter[1]
+                    if reference_type == 'BYREF':
+                        current_value = self.CURRENT_SCOPE.VALUES.get(var_name)
 
-                        if reference_variable != None:
-                            self.CURRENT_SCOPE.PARENT_SCOPE.VALUES[variable] = current_value
-                        else:
-                            Error().reference_error(variable)
+                        parent_name = self.CURRENT_SCOPE.SYMBOL_TABLE.SYMBOL_TABLE[var_name].parent_name
 
-                # self.CURRENT_SCOPE.VALUES.clear()
-                # self.CURRENT_SCOPE.SYMBOL_TABLE.clear()
+                        self.CURRENT_SCOPE.PARENT_SCOPE.VALUES[parent_name] = current_value
 
                 self.CURRENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
                 self.PARENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
 
+
+
                 if scope.return_type != None:
-                    self.check_type(self.visit(scope.return_type), return_value, var_name)
+                    self.check_type(scope.return_type, return_value, var_name)
                     return return_value
 
             else:
                 raise SyntaxError('Expected ' + str(len(self.CURRENT_SCOPE.parameters)) + ' parameter(s).' + ' Got ' + str(len(parameters)) + ' parameter(s)')
         else:
-            Error().name_error('{} does not exist'.format(var_name))
+            Error().name_error('{} does not exist'.format(name))
 
     def visit_Function(self, node):
         name = self.visit(node.name)
-        self.SCOPES[name] = Scope(self.CURRENT_SCOPE, [], node.return_type, node.block)
-
+        self.SCOPES[name] = Scope(self.CURRENT_SCOPE, [], self.visit(node.return_type), node.block)
 
         if node.return_type == None:
             self.CURRENT_SCOPE.SYMBOL_TABLE.add(name, 'PROCEDURE')
@@ -557,9 +554,17 @@ class Interpreter():
         parameters = []
 
         for parameter in node.parameters:
-            variable, data_type, scope_type = self.visit(parameter)
-            self.SCOPES[name].SYMBOL_TABLE.add(variable, data_type)
-            self.SCOPES[name].parameters.append([scope_type, variable])
+            variable, data_type, reference_type = self.visit(parameter)
+            metadata = Variable(data_type, None, reference_type)
+            self.SCOPES[name].SYMBOL_TABLE.add(variable, metadata)
+            self.SCOPES[name].parameters.append([reference_type, variable])
+
+    def visit_Parameter(self, node):
+        variable = self.visit(node.variable)
+        data_type = self.visit(node.data_type)
+        reference_type = node.reference_type.value
+
+        return variable, data_type, reference_type
 
     # END: Procedure/Function
 

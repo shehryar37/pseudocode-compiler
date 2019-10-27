@@ -249,10 +249,10 @@ class BuiltInFunction(AST):
 
 
 class Parameter(AST):
-    def __init__(self, variable, data_type, scope_type):
+    def __init__(self, variable, data_type, reference_type):
         self.variable = variable
         self.data_type = data_type
-        self.scope_type = scope_type
+        self.reference_type = reference_type
 
 # START: Procedure/Function
 

@@ -1,4 +1,5 @@
 from symbol_table import SymbolTable
+from copy import deepcopy
 
 
 class Scope():
@@ -11,8 +12,8 @@ class Scope():
         self.DATA_TYPES = {}
 
         if self.PARENT_SCOPE != None:
-            self.DATA_TYPES = self.PARENT_SCOPE.DATA_TYPES
-            self.VALUES = self.PARENT_SCOPE.VALUES
+            self.DATA_TYPES = deepcopy(self.PARENT_SCOPE.DATA_TYPES)
+            self.VALUES = deepcopy(self.PARENT_SCOPE.VALUES)
         else:
             self.init_data_types()
             self.VALUES = {}

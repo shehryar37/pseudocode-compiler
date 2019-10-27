@@ -565,7 +565,7 @@ class SyntaxAnalysis():
 
     def parameter(self):
         # VARIABLE COLON DATA_TYPE
-        scope_type = self.current_token
+        reference_type = self.current_token
         if self.current_token.value in ['BYREF', 'BYVAL']:
             self.check_token_type('KEYWORD')
         variable = VariableName(self.current_token)
@@ -573,7 +573,7 @@ class SyntaxAnalysis():
         self.check_token_type('COLON')
         data_type = self.data_type()
 
-        node = Parameter(variable, data_type, scope_type)
+        node = Parameter(variable, data_type, reference_type)
         return node
 
     def call(self):
