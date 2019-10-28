@@ -8,20 +8,19 @@ class Interpreter():
         self.parser = parser
         self.SCOPES = {}
         self.PARENT_SCOPE = None
-        self.SCOPES['GLOBAL'] = Scope(self.PARENT_SCOPE, [], None, None)
+        self.SCOPES['GLOBAL'] = Scope(self.PARENT_SCOPE, None)
         self.CURRENT_SCOPE = self.SCOPES.get('GLOBAL')
 
     def interpret(self):
         tree = self.parser.block(['EOF'])
-        # self.parser.check_token_value('EOF')
         self.visit(tree)
 
     def visit(self, node):
         method_name = 'visit_' + type(node).__name__
-        visitor = getattr(self, method_name, self.generic_visit)
+        visitor = getattr(self, method_name, self.visit_error)
         return visitor(node)
 
-    def generic_visit(self, node):
+    def visit_error(self, node):
         Error().exception('No visit_{} method'.format(type(node).__name__))
 
     def visit_function(self, node):
@@ -29,9 +28,6 @@ class Interpreter():
         visitor = getattr(BuiltInFunction(self.CURRENT_SCOPE),
                           method_name, self.generic_visit)
         return visitor(node.parsed_parameters)
-
-    def visit_EmptyLine(self, token):
-        return None
 
     def visit_Block(self, node):
         for statement in node.block:
@@ -47,45 +43,39 @@ class Interpreter():
 
     def visit_BinaryOperation(self, node):
 
-        if node.operation.value == '+':
+        operator = self.visit(node.operator)
+
+        if operator == '+':
             return self.visit(node.left) + self.visit(node.right)
-        elif node.operation.value == '-':
+        elif operator == '-':
             return self.visit(node.left) - self.visit(node.right)
-        elif node.operation.value == '*':
+        elif operator == '*':
             return self.visit(node.left) * self.visit(node.right)
-        elif node.operation.value == '/':
-
-            right = self.visit(node.right)
-
-            if right == 0:
-                Error().zero_error()
-
-            return self.visit(node.left) / right
-        elif node.operation.value == 'DIV':
-
-            right = self.visit(node.right)
-
-            if right == 0:
-                Error().zero_error()
-
-            return self.visit(node.left) // right
-        elif node.operation.value == 'MOD':
-
-            right = self.visit(node.right)
-
-            if right == 0:
-                Error().zero_error()
-
-            return self.visit(node.left) % right
-
-        elif node.operation.value == '^':
+        elif operator == '^':
             return self.visit(node.left) ** self.visit(node.right)
+        elif operator in ['/', 'DIV', 'MOD']:
+            right = self.visit(node.right)
+
+            if right == 0:
+                Error().zero_error()
+
+            if operator == '/':
+                return self.visit(node.left) / right
+            elif operator == 'DIV':
+                return self.visit(node.left) // right
+            elif operator == 'MOD':
+                return self.visit(node.left) % right
 
     def visit_UnaryOperation(self, node):
-        if node.op.value == '+':
-            return +self.visit(node.expr)
-        elif node.op.value == '-':
-            return -self.visit(node.expr)
+        operator = self.visit(node.operator)
+
+        if operator == '+':
+            return +self.visit(node.expression)
+        elif operator == '-':
+            return -self.visit(node.expression)
+
+    def visit_Operator(self, node):
+        return node.value
 
     def visit_Value(self, node):
         return node.token.value
@@ -99,17 +89,19 @@ class Interpreter():
             self.visit(declaration)
 
     def visit_VariableDeclaration(self, declaration):
-        var_name = self.visit(declaration.variable)
+        variable_name = self.visit(declaration.variable)
 
         variable_metadata = Variable(self.visit(declaration.data_type))
 
-        self.CURRENT_SCOPE.SYMBOL_TABLE.add(var_name, variable_metadata)
+        self.CURRENT_SCOPE.SYMBOL_TABLE.add(variable_name, variable_metadata)
 
     def visit_DataType(self, data_type):
-        if data_type.value in self.CURRENT_SCOPE.DATA_TYPES.keys():
-            return data_type.value
+        data_type = data_type.value
+
+        if data_type in self.CURRENT_SCOPE.DATA_TYPES.keys():
+            return data_type
         else:
-            Error().type_error('TYPE {} has not been initialized'.format(data_type.value))
+            Error().type_error('TYPE {} has not been initialized'.format(data_type))
 
     # END: Variable Declaration
 
@@ -135,7 +127,7 @@ class Interpreter():
         lower_bound = self.visit(dimension.lower_bound)
         upper_bound = self.visit(dimension.upper_bound)
 
-        if not upper_bound > lower_bound:
+        if upper_bound < lower_bound:
             Error().index_error('Upper bound cannot be lesser than or equal to lower bound')
 
         return [lower_bound, upper_bound]
@@ -151,7 +143,7 @@ class Interpreter():
         type_name = self.visit(node.type_name)
 
         # Creates a new scope with the TYPE name
-        self.SCOPES[type_name] = scope = Scope(self.CURRENT_SCOPE, [], [], node.block)
+        self.SCOPES[type_name] = scope = Scope(self.CURRENT_SCOPE, node.block)
 
         # Scopes into TYPE
         scope.PARENT_SCOPE = self.CURRENT_SCOPE
@@ -168,10 +160,6 @@ class Interpreter():
         self.PARENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
 
         self.CURRENT_SCOPE.DATA_TYPES[type_name] = type(type_name, (), children)
-
-    def visit_TypeAssignment(self, node):
-        self.visit(node.object)
-        # TODO September 25, 2019: Complete this piece of code
 
     # END: Type Declaration
 
@@ -230,18 +218,8 @@ class Interpreter():
                     else:
                         self.CURRENT_SCOPE.add(
                             var_name[0], {str(dimensions): value})
-
             else:
                 Error().name_error(var_name)
-
-            # FIXME September 3, 2019: This does not work for BYREF values
-
-            # for parameter in self.CURRENT_SCOPE.parameters:
-                # if parameter[0].value == 'BYREF' and parameter[1] == var_name:
-                #     if self.CURRENT_SCOPE.PARENT_SCOPE.VALUES.get(var_name) != None:
-                #         self.CURRENT_SCOPE.PARENT_SCOPE.add(var_name, value)
-                #     else:
-                #         raise ReferenceError(repr(var_name))
 
     def visit_VariableName(self, node):
         return node.value
@@ -311,44 +289,37 @@ class Interpreter():
     # START: Input
 
     def visit_AssignInput(self, node):
-        var_name = self.visit(node.input_node)
+        variable_name = self.visit(node.input_node)
         value = input(node.input_node.input_string)
 
-        if type(var_name) != list:
-            type_ = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name)
+        if type(variable_name) != list:
+            type_ = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(variable_name)
 
-            value = self.try_type(type_, value, var_name)
+            value = self.try_type(type_, value, variable_name)
 
-            self.CURRENT_SCOPE.add(var_name, value)
-
-            # for parameter in self.CURRENT_SCOPE.parameters:
-            #     if parameter[0].value == 'BYREF' and parameter[1] == var_name:
-            #         if self.CURRENT_SCOPE.PARENT_SCOPE.VALUES.get(var_name) != None:
-            #             self.CURRENT_SCOPE.PARENT_SCOPE.add(var_name, value)
-            #         else:
-            #             raise ReferenceError(repr(var_name))
+            self.CURRENT_SCOPE.add(variable_name, value)
         else:
-            data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name[0])
+            data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(variable_name[0])
             if data_type is not None:
-                dimensions = var_name[1]
+                dimensions = variable_name[1]
 
                 # Checks if the number of dimensions(rank) of both arrays is the same
                 if len(dimensions) != len(data_type.dimensions):
-                    Error().index_error(var_name)
+                    Error().index_error(variable_name)
 
                 # Checks if the index is within upper and lower bound limits
                 for i in range(len(dimensions)):
                     if dimensions[i] < data_type.dimensions[i][0] or dimensions[i] > data_type.dimensions[i][1]:
-                        Error().index_error(var_name[0])
+                        Error().index_error(variable_name[0])
 
                     type_ = data_type.data_type
 
-                    self.try_type(type_, value, var_name)
+                    self.try_type(type_, value, variable_name)
 
-                    if self.CURRENT_SCOPE.VALUES.get(var_name[0]):
+                    if self.CURRENT_SCOPE.VALUES.get(variable_name[0]):
                         self.CURRENT_SCOPE.VALUES[var_name[0]][str(dimensions)] = value
                     else:
-                        self.CURRENT_SCOPE.add(var_name[0], {str(dimensions) : value})
+                        self.CURRENT_SCOPE.add(variable_name[0], {str(dimensions) : value})
 
     def visit_Input(self, node):
         return self.visit(node.variable)
@@ -365,14 +336,17 @@ class Interpreter():
     # START: Logical
 
     def visit_BinaryLogicalOperation(self, node):
-        if node.logical_operation.value == 'AND':
+        logical_operator = self.visit(node.logical_operator)
+
+        if logical_operator == 'AND':
             left = self.visit(node.left)
             right = self.visit(node.right)
             return left and right
-        elif node.logical_operation.value == 'OR':
+        elif logical_operator == 'OR':
             left = self.visit(node.left)
             right = self.visit(node.right)
             return left or right
+
     def visit_UnaryLogicalOperation(self, node):
             return not self.visit(node.condition)
 
@@ -544,7 +518,7 @@ class Interpreter():
 
     def visit_Function(self, node):
         name = self.visit(node.name)
-        self.SCOPES[name] = Scope(self.CURRENT_SCOPE, [], self.visit(node.return_type), node.block)
+        self.SCOPES[name] = Scope(self.CURRENT_SCOPE, node.block, return_type=node.return_type)
 
         if node.return_type == None:
             self.CURRENT_SCOPE.SYMBOL_TABLE.add(name, 'PROCEDURE')
@@ -626,45 +600,22 @@ class Interpreter():
 
     def try_type(self, type_, value, var_name):
         if type_ is not None:
-            if type_ == 'INTEGER':
-                try:
-                    value = int(value)
-                except:
-                     Error().type_error(repr(var_name))
-            if type_ == 'REAL':
-                try:
-                    value = float(value)
-                except:
-                     Error().type_error(repr(var_name))
-            elif type_ == 'BOOLEAN':
-                try:
-                    value = bool(value)
-                except:
-                     Error().type_error(repr(var_name))
-            elif type_ == 'STRING':
-                try:
-                    value = str(value)
-                except:
-                     Error().type_error(repr(var_name))
-            elif type_ == 'CHAR':
-                try:
-                    value = str(value)
-                    if len(value) != 1:
-                         Error().type_error(repr(var_name))
-                except:
-                    Error().type_error(repr(var_name))
+            if type_ in self.CURRENT_SCOPE.DATA_TYPES.keys():
+                type_ = self.CURRENT_SCOPE.DATA_TYPES[type_]
 
-            return value
-
+            try:
+                return type_(value)
+            except:
+                Error().type_error(repr(var_name))
 
     def check_declaration(self, var_name):
         if self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name) is None:
             Error().name_error(var_name)
-        else:
-            try:
-                value = self.CURRENT_SCOPE.VALUES.get(var_name)
-                return value
-            except:
-                Error().unbound_local_error(var_name)
+
+        try:
+            value = self.CURRENT_SCOPE.VALUES.get(var_name)
+            return value
+        except:
+            Error().unbound_local_error(var_name)
 
     # END: Helper Functions

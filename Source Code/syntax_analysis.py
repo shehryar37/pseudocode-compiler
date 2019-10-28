@@ -87,10 +87,10 @@ class SyntaxAnalysis():
         node = self.term()
 
         while self.current_token.value in ('+', '-'):
-            token = self.current_token
+            operator = Operator(self.current_token)
             self.check_token_type('OPERATION')
 
-            node = BinaryOperation(node, token, self.term())
+            node = BinaryOperation(node, operator, self.term())
 
         return node
 
@@ -98,10 +98,10 @@ class SyntaxAnalysis():
         node = self.factor()
 
         while self.current_token.value in ('*', '/', 'DIV', 'MOD', '^'):
-            token = self.current_token
+            operator = Operator(self.current_token)
             self.check_token_type('OPERATION')
 
-            node = BinaryOperation(node, token, self.factor())
+            node = BinaryOperation(node, operator, self.factor())
 
         return node
 
@@ -335,7 +335,7 @@ class SyntaxAnalysis():
     def logical_expression(self):
         node = self.logical_term()
         while self.current_token.value == 'AND':
-            token = self.current_token
+            token = Operator(self.current_token)
             self.check_token_type('LOGICAL')
 
             node = BinaryLogicalOperation(node, token, self.logical_term())
@@ -346,7 +346,7 @@ class SyntaxAnalysis():
         node = self.logical_factor()
 
         while self.current_token.value == 'OR':
-            token = self.current_token
+            token = Operator(self.current_token)
             self.check_token_type('LOGICAL')
 
             node = BinaryLogicalOperation(node, token, self.logical_factor())
@@ -357,7 +357,7 @@ class SyntaxAnalysis():
         token = self.current_token
         if token.value == 'NOT':
             self.check_token_type('LOGICAL')
-            node = UnaryLogicalOperation(token, self.logical_factor())
+            node = UnaryLogicalOperation(Operator(token), self.logical_factor())
         elif token.type == 'PARENTHESIS':
             self.check_token_value('(')
             node = self.logical_expression()
