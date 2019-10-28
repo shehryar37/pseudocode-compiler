@@ -12,22 +12,23 @@ class Statement(AST):
         self.statement = statement
 
 
-class EmptyLine(AST):
-    def __init__(self, token):
-        self.token = token
+class Operator(AST):
+    def __init__(self, operator):
+        self.operator = operator
+        self.value = operator.value
 
 
 class BinaryOperation(AST):
-    def __init__(self, left, operation, right):
+    def __init__(self, left, operator, right):
         self.left = left
-        self.token = self.operation = operation
+        self.operator = operator
         self.right = right
 
 
 class UnaryOperation(AST):
-    def __init__(self, op, expr):
-        self.token = self.op = op
-        self.expr = expr
+    def __init__(self, operator, expression):
+        self.operator
+        self.expression = expression
 
 
 class Value(AST):
@@ -151,15 +152,15 @@ class Output(AST):
 
 
 class BinaryLogicalOperation(AST):
-    def __init__(self, left, logical_operation, right):
+    def __init__(self, left, logical_operator, right):
         self.left = left
-        self.logical_operation = logical_operation
+        self.logical_operator = logical_operator
         self.right = right
 
 
 class UnaryLogicalOperation(AST):
-    def __init__(self, logical_operation, condition):
-        self.logical_operation = logical_operation
+    def __init__(self, logical_operator, condition):
+        self.logical_operator = logical_operator
         self.condition = condition
 
 

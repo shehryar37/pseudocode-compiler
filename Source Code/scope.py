@@ -3,7 +3,7 @@ from copy import deepcopy
 
 
 class Scope():
-    def __init__(self, PARENT_SCOPE, parameters, return_type, block):
+    def __init__(self, PARENT_SCOPE, block, parameters=[], return_type=[]):
         self.SYMBOL_TABLE = SymbolTable()
         self.PARENT_SCOPE = PARENT_SCOPE
         self.parameters = parameters
