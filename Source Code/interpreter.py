@@ -2,6 +2,7 @@ from function import BuiltInFunction
 from scope import Scope
 from error import Error
 from symbol_table import *
+from copy import deepcopy
 
 class Interpreter():
     def __init__(self, parser):
@@ -26,7 +27,7 @@ class Interpreter():
     def visit_function(self, node):
         method_name = node.name.value
         visitor = getattr(BuiltInFunction(self.CURRENT_SCOPE),
-                          method_name, self.generic_visit)
+                          method_name, self.visit_error)
         return visitor(node.parsed_parameters)
 
     def visit_Block(self, node):
@@ -172,7 +173,7 @@ class Interpreter():
         if type(var_name) is not list:
             data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name)
             if data_type is None:
-                Error.name_error(var_name)
+                Error().unbound_local_error(var_name)
 
             if type(value) is not list:
                 self.check_type(data_type, value, var_name)
@@ -189,7 +190,7 @@ class Interpreter():
                                  data_type.data_type, value[offset], var_name)
 
                             if self.CURRENT_SCOPE.VALUES.get(var_name):
-                                self.CURRENT_SCOPE.VALUES[variable]['[{}]'.format(str(j))] = value[offset]
+                                self.CURRENT_SCOPE.VALUES[var_name]['[{}]'.format(str(j))] = value[offset]
                             else:
                                 self.CURRENT_SCOPE.add(
                                     var_name, {'[{}]'.format(str(j)): value[offset]})
@@ -213,7 +214,7 @@ class Interpreter():
 
                     # TODO September 20, 2019: Try making this elegant (remove if)
                     if self.CURRENT_SCOPE.VALUES.get(var_name[0]):
-                        self.CURRENT_SCOPE.VALUES[variable[0]][str(
+                        self.CURRENT_SCOPE.VALUES[var_name[0]][str(
                             dimensions)] = value
                     else:
                         self.CURRENT_SCOPE.add(
@@ -505,8 +506,6 @@ class Interpreter():
                 self.CURRENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
                 self.PARENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
 
-
-
                 if scope.return_type != None:
                     self.check_type(scope.return_type, return_value, var_name)
                     return return_value
@@ -546,7 +545,7 @@ class Interpreter():
 
     def visit_File(self, node):
         file_name = self.visit(node.file_name)
-        self.CURRENT_SCOPE.SYMBOL_TABLE.add(file_name, 'FILE')
+        self.CURRENT_SCOPE.SYMBOL_TABLE.add(file_name, Variable('FILE'))
         self.CURRENT_SCOPE.add(file_name, open(file_name, self.visit(node.file_mode)))
 
     def visit_FileMode(self, node):
@@ -577,7 +576,7 @@ class Interpreter():
         file = self.visit(node.file_name)
         line = self.visit(node.line)
         try:
-            file.write(line)
+            file.write(line + '\n')
         except:
             Error().exception(file.name)
 

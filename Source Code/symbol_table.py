@@ -9,5 +9,8 @@ class SymbolTable():
         self.SYMBOL_TABLE[name] = metadata
 
     def lookup(self, var_name):
-        value = self.SYMBOL_TABLE.get(var_name).var_type
-        return value
+        try:
+            value = self.SYMBOL_TABLE.get(var_name).var_type
+            return value
+        except:
+            return None

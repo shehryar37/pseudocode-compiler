@@ -26,3 +26,8 @@ class Scope():
         self.DATA_TYPES['STRING'] = str
         self.DATA_TYPES['REAL'] = float
         self.DATA_TYPES['BOOLEAN'] = bool
+        self.DATA_TYPES['CHAR'] = str
+
+    def clear(self):
+        self.VALUES = None
+        self.parameters = None

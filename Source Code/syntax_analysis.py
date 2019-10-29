@@ -334,7 +334,7 @@ class SyntaxAnalysis():
 
     def logical_expression(self):
         node = self.logical_term()
-        while self.current_token.value == 'AND':
+        while self.current_token.value == 'OR':
             token = Operator(self.current_token)
             self.check_token_type('LOGICAL')
 
@@ -345,7 +345,7 @@ class SyntaxAnalysis():
     def logical_term(self):
         node = self.logical_factor()
 
-        while self.current_token.value == 'OR':
+        while self.current_token.value == 'AND':
             token = Operator(self.current_token)
             self.check_token_type('LOGICAL')
 
@@ -687,7 +687,7 @@ class SyntaxAnalysis():
 
     def close_file(self):
         self.check_token_type('KEYWORD')
-        file_name = VariableName(self.current_token)
+        file_name = VariableValue(self.current_token)
         self.check_token_type('STRING')
 
         return CloseFile(file_name)
