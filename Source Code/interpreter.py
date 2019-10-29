@@ -462,7 +462,7 @@ class Interpreter():
 
     def visit_FunctionCall(self, node):
         name = self.visit(node.name)
-        scope = self.SCOPES.get(name)
+        scope = deepcopy(self.SCOPES.get(name))
 
         if scope != None:
             parameters = []
