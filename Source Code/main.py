@@ -1,6 +1,9 @@
 from syntax_analysis import SyntaxAnalysis
 from error import Error
 from interpreter import Interpreter
+import sys
+
+sys.tracebacklimit = 0
 
 
 def main():
