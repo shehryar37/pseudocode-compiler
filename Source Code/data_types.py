@@ -5,10 +5,22 @@ class Variable():
         self.var_reference = var_reference
 
 
+class Constant():
+    def __init__(self, constant):
+        self.constant = constant
+        self.var_type = 'CONSTANT'
+
+    # Not currently being used
+    @property
+    def get(self):
+        return self.constant
+
+
 class Array():
     def __init__(self, dimensions, data_type):
         self.dimensions = dimensions
         self.data_type = data_type
+
 
 class Type():
     def __init__(self, object_, property_):

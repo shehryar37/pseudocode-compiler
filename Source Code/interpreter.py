@@ -83,6 +83,18 @@ class Interpreter():
 
     # END: Operation Handling
 
+    # START: Constants
+
+    def visit_ConstantDeclaration(self, node):
+        constant_name = self.visit(node.constant)
+        value = self.visit(node.value)
+
+        constant_metadata = Constant(value)
+        self.CURRENT_SCOPE.SYMBOL_TABLE.add(constant_name, constant_metadata)
+        self.CURRENT_SCOPE.add(constant_name, value)
+
+    # END: Constants
+
     # START: Variable Declaration
 
     def visit_Declarations(self, declarations):
@@ -174,6 +186,8 @@ class Interpreter():
             data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name)
             if data_type is None:
                 Error().unbound_local_error(var_name)
+            if data_type == 'CONSTANT':
+                Error().name_error('Cannot assign to CONSTANT')
 
             if type(value) is not list:
                 self.check_type(data_type, value, var_name)

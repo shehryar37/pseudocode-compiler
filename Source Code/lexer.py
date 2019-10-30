@@ -13,7 +13,7 @@ class Lexer():
         self.tokens = {
             'KEYWORD': ['INPUT', 'OUTPUT', 'DECLARE', 'OF', 'IF', 'THEN', 'ELSEIF',
                         'ELSE', 'ENDIF', 'FOR', 'TO', 'STEP', 'ENDFOR', 'REPEAT',
-                        'UNTIL', 'WHILE', 'ENDWHILE', 'CASE', 'OF', 'OTHERWISE', 'ENDCASE', 'PROCEDURE', 'ENDPROCEDURE', 'FUNCTION', 'ENDFUNCTION', 'RETURN', 'CALL', 'BYVAL', 'BYREF', 'OPENFILE', 'READFILE', 'WRITEFILE', 'CLOSEFILE', 'TYPE', 'ENDTYPE'
+                        'UNTIL', 'WHILE', 'ENDWHILE', 'CASE', 'OF', 'OTHERWISE', 'ENDCASE', 'PROCEDURE', 'ENDPROCEDURE', 'FUNCTION', 'ENDFUNCTION', 'RETURN', 'CALL', 'BYVAL', 'BYREF', 'OPENFILE', 'READFILE', 'WRITEFILE', 'CLOSEFILE', 'TYPE', 'ENDTYPE', 'CONSTANT'
                         ],
             'BUILTIN_FUNCTION': ['CHR', 'ASC', 'LENGTH', 'LEFT', 'RIGHT', 'MID',
                                  'CONCAT', 'INT', 'LCASE', 'UCASE', 'TONUM', 'TOSTRING', 'SUBSTR', 'ONECHAR', 'CHARACTERCOUNT', 'EOF'

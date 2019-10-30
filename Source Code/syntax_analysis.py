@@ -20,40 +20,43 @@ class SyntaxAnalysis():
 
     def statement(self):
         token = self.current_token
+        value = token.value
         if token.type == 'KEYWORD':
-            if token.value == 'PROCEDURE':
+            if value == 'PROCEDURE':
                 node = self.procedure()
-            elif token.value == 'FUNCTION':
+            elif value == 'FUNCTION':
                 node = self.function()
-            elif token.value == 'CALL':
+            elif value == 'CALL':
                 node = self.call()
-            elif token.value == 'RETURN':
+            elif value == 'RETURN':
                 node = self.return_value()
-            if token.value == 'INPUT':
+            elif value == 'INPUT':
                 node = self.assign_input()
-            elif token.value == 'OUTPUT':
+            elif value == 'OUTPUT':
                 node = self.output()
-            elif token.value == 'DECLARE':
+            elif value == 'DECLARE':
                 node = self.declarations()
-            elif token.value == 'IF':
+            elif value == 'CONSTANT':
+                node = self.constant()
+            elif value == 'IF':
                 node = self.selection()
-            elif token.value == 'CASE':
+            elif value == 'CASE':
                 node = self.case()
-            elif token.value == 'FOR':
+            elif value == 'FOR':
                 node = self.iteration()
-            elif token.value == 'REPEAT':
+            elif value == 'REPEAT':
                 node = self.post_condition_loop()
-            elif token.value == 'WHILE':
+            elif value == 'WHILE':
                 node = self.pre_condition_loop()
-            elif token.value == 'OPENFILE':
+            elif value == 'OPENFILE':
                 node = self.open_file()
-            elif token.value == 'READFILE':
+            elif value == 'READFILE':
                 node = self.read_file()
-            elif token.value == 'WRITEFILE':
+            elif value == 'WRITEFILE':
                 node = self.write_file()
-            elif token.value == 'CLOSEFILE':
+            elif value == 'CLOSEFILE':
                 node = self.close_file()
-            elif token.value == 'TYPE':
+            elif value == 'TYPE':
                 node = self.declare_type()
         elif token.type == 'VARIABLE':
             node = self.assignment()
@@ -160,6 +163,19 @@ class SyntaxAnalysis():
         return node
 
     # END: Operation Handling
+
+    # START: Constants
+
+    def constant(self):
+        self.check_token_value('CONSTANT')
+        constant = VariableName(self.current_token)
+        self.check_token_type('VARIABLE')
+        self.check_token_type('ASSIGNMENT')
+        value = self.expression()
+
+        return ConstantDeclaration(constant, value)
+
+    # END: Constants
 
     # START: Variable Declaration
 

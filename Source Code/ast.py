@@ -35,6 +35,15 @@ class Value(AST):
     def __init__(self, token):
         self.token = token
 
+# START: Constants
+
+class ConstantDeclaration(AST):
+    def __init__(self, constant, value):
+        self.constant = constant
+        self.value = value
+
+# END: Constants
+
 # START: Variable Declaration
 
 
