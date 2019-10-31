@@ -37,6 +37,7 @@ class Value(AST):
 
 # START: Constants
 
+
 class ConstantDeclaration(AST):
     def __init__(self, constant, value):
         self.constant = constant

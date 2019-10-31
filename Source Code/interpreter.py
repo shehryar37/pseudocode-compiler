@@ -4,6 +4,7 @@ from error import Error
 from symbol_table import *
 from copy import deepcopy
 
+
 class Interpreter():
     def __init__(self, parser):
         self.parser = parser
@@ -166,78 +167,119 @@ class Interpreter():
         self.visit(scope.block)
 
         # Gets all the declarations within TYPE
-        children = {'SYMBOL_TABLE' : self.CURRENT_SCOPE.SYMBOL_TABLE}
+        children = {'SYMBOL_TABLE': self.CURRENT_SCOPE.SYMBOL_TABLE}
 
         # Scopes out of TYPE
         self.CURRENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
         self.PARENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
 
-        self.CURRENT_SCOPE.DATA_TYPES[type_name] = type(type_name, (), children)
+        self.CURRENT_SCOPE.DATA_TYPES[type_name] = type(
+            type_name, (), children)
 
     # END: Type Declaration
 
     # START: Variable Assignment
 
     def visit_Assignment(self, node):
-        var_name = self.visit(node.variable)
-        value = self.visit(node.expression)
 
-        if type(var_name) is not list:
-            data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name)
-            if data_type is None:
-                Error().unbound_local_error(var_name)
-            if data_type == 'CONSTANT':
-                Error().name_error('Cannot assign to CONSTANT')
+        # TODO October 31, 2019: Add value as attr to node.variable and then change within functions
 
-            if type(value) is not list:
-                self.check_type(data_type, value, var_name)
-                self.CURRENT_SCOPE.add(var_name, value)
-            else:
-                # FIXME September 20, 2019: Does not work for 2D+ ARRAY
-                for i in range(len(data_type.dimensions)):
-                    if len(value) == (data_type.dimensions[i][1] - data_type.dimensions[i][0] + 1):
-                        for j in range(data_type.dimensions[i][0], data_type.dimensions[i][1] + 1):
+        setattr(node.variable, 'assign_value', node.expression)
+        self.visit(node.variable)
+        # value = self.visit(node.expression)
 
-                            offset = j - data_type.dimensions[i][0]
+        # if type(var_name) is not list:
+        #     data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name)
+        #     if data_type is None:
+        #         Error().unbound_local_error(var_name)
+        #     if data_type == 'CONSTANT':
+        #         Error().name_error('Cannot assign to CONSTANT')
 
-                            self.check_type(
-                                 data_type.data_type, value[offset], var_name)
+        #     if type(value) is not list:
+        #         self.check_type(data_type, value, var_name)
+        #         self.CURRENT_SCOPE.add(var_name, value)
+        #     else:
+        #         # FIXME September 20, 2019: Does not work for 2D+ ARRAY
+        #         for i in range(len(data_type.dimensions)):
+        #             if len(value) == (data_type.dimensions[i][1] - data_type.dimensions[i][0] + 1):
+        #                 for j in range(data_type.dimensions[i][0], data_type.dimensions[i][1] + 1):
 
-                            if self.CURRENT_SCOPE.VALUES.get(var_name):
-                                self.CURRENT_SCOPE.VALUES[var_name]['[{}]'.format(str(j))] = value[offset]
-                            else:
-                                self.CURRENT_SCOPE.add(
-                                    var_name, {'[{}]'.format(str(j)): value[offset]})
-                    else:
-                        Error().index_error(var_name)
-        else:
-            data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name[0])
-            if data_type is not None:
-                self.check_type(data_type.data_type, value, var_name[0])
+        #                     offset = j - data_type.dimensions[i][0]
 
-                dimensions = var_name[1]
+        #                     self.check_type(
+        #                          data_type.data_type, value[offset], var_name)
 
-                # Checks if the number of dimensions(rank) of both arrays is the same
-                if len(dimensions) != len(data_type.dimensions):
-                    Error().index_error(var_name[0])
+        #                     if self.CURRENT_SCOPE.VALUES.get(var_name):
+        #                         self.CURRENT_SCOPE.VALUES[var_name]['[{}]'.format(str(j))] = value[offset]
+        #                     else:
+        #                         self.CURRENT_SCOPE.add(
+        #                             var_name, {'[{}]'.format(str(j)): value[offset]})
+        #             else:
+        #                 Error().index_error(var_name)
+        # else:
 
-                # Checks if the index is within upper and lower bound limits
-                for i in range(len(dimensions)):
-                    if dimensions[i] < data_type.dimensions[i][0] or dimensions[i] > data_type.dimensions[i][1]:
-                        Error().index_error(var_name[0])
+        #     data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name[0])
+        #     if data_type is not None:
+        #         self.check_type(data_type.data_type, value, var_name[0])
 
-                    # TODO September 20, 2019: Try making this elegant (remove if)
-                    if self.CURRENT_SCOPE.VALUES.get(var_name[0]):
-                        self.CURRENT_SCOPE.VALUES[var_name[0]][str(
-                            dimensions)] = value
-                    else:
-                        self.CURRENT_SCOPE.add(
-                            var_name[0], {str(dimensions): value})
-            else:
-                Error().name_error(var_name)
+        #         dimensions = var_name[1]
+
+        #         # Checks if the number of dimensions(rank) of both arrays is the same
+        #         if len(dimensions) != len(data_type.dimensions):
+        #             Error().index_error(var_name[0])
+
+        #         # Checks if the index is within upper and lower bound limits
+        #         for i in range(len(dimensions)):
+        #             if dimensions[i] < data_type.dimensions[i][0] or dimensions[i] > data_type.dimensions[i][1]:
+        #                 Error().index_error(var_name[0])
+
+        #             # TODO September 20, 2019: Try making this elegant (remove if)
+        #             if self.CURRENT_SCOPE.VALUES.get(var_name[0]):
+        #                 self.CURRENT_SCOPE.VALUES[var_name[0]][str(
+        #                     dimensions)] = value
+        #             else:
+        #                 self.CURRENT_SCOPE.add(
+        #                     var_name[0], {str(dimensions): value})
+        #     else:
+        #         Error().name_error(var_name)
 
     def visit_VariableName(self, node):
-        return node.value
+        var_name = node.value
+
+        if getattr(node, 'assign_value', None) == None:
+            return var_name
+
+        value = self.visit(node.assign_value)
+
+        delattr(node, 'assign_value')
+
+        data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name)
+        if data_type is None:
+            Error().unbound_local_error(var_name)
+        if data_type == 'CONSTANT':
+            Error().name_error('Cannot assign to CONSTANT')
+
+        if type(value) is not list:
+            self.check_type(data_type, value, var_name)
+            self.CURRENT_SCOPE.add(var_name, value)
+        else:
+            # FIXME September 20, 2019: Does not work for 2D+ ARRAY
+            for i in range(len(data_type.dimensions)):
+                if len(value) == (data_type.dimensions[i][1] - data_type.dimensions[i][0] + 1):
+                    for j in range(data_type.dimensions[i][0], data_type.dimensions[i][1] + 1):
+
+                        offset = j - data_type.dimensions[i][0]
+
+                        self.check_type(data_type.data_type,
+                                        value[offset], var_name)
+                        if self.CURRENT_SCOPE.VALUES.get(var_name):
+                            self.CURRENT_SCOPE.VALUES[var_name]['[{}]'.format(
+                                str(j))] = value[offset]
+                        else:
+                            self.CURRENT_SCOPE.add(
+                                var_name, {'[{}]'.format(str(j)): value[offset]})
+                else:
+                    Error().index_error(var_name)
 
     def visit_VariableValue(self, node):
         var_name = node.value
@@ -254,7 +296,31 @@ class Interpreter():
         for index in node.indexes:
             indexes.append(self.visit(index))
 
-        return [var_name, indexes]
+        dimensions = indexes
+        value = self.visit(node.assign_value)
+
+        data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name)
+        if data_type is not None:
+            self.check_type(data_type.data_type, value, var_name)
+
+            # Checks if the number of dimensions(rank) of both arrays is the same
+            if len(dimensions) != len(data_type.dimensions):
+                Error().index_error(var_name[0])
+
+            # Checks if the index is within upper and lower bound limits
+            for i in range(len(dimensions)):
+                if dimensions[i] < data_type.dimensions[i][0] or dimensions[i] > data_type.dimensions[i][1]:
+                    Error().index_error(var_name)
+
+                # TODO September 20, 2019: Try making this elegant (remove if)
+                if self.CURRENT_SCOPE.VALUES.get(var_name):
+                    self.CURRENT_SCOPE.VALUES[var_name][str(
+                        dimensions)] = value
+                else:
+                    self.CURRENT_SCOPE.add(
+                        var_name, {str(dimensions): value})
+        else:
+            Error().name_error(var_name)
 
     def visit_ElementValue(self, node):
         var_name = node.value
@@ -297,6 +363,7 @@ class Interpreter():
         return [object_, property_]
 
     def visit_TypeValue(self, node):
+        # TODO November 01, 2019: The time has come to complete this after 49 days...
         pass
 
     # END: Type Assignment
