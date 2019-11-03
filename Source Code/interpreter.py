@@ -181,67 +181,8 @@ class Interpreter():
     # START: Variable Assignment
 
     def visit_Assignment(self, node):
-
-        # TODO October 31, 2019: Add value as attr to node.variable and then change within functions
-
         setattr(node.variable, 'assign_value', node.expression)
         self.visit(node.variable)
-        # value = self.visit(node.expression)
-
-        # if type(var_name) is not list:
-        #     data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name)
-        #     if data_type is None:
-        #         Error().unbound_local_error(var_name)
-        #     if data_type == 'CONSTANT':
-        #         Error().name_error('Cannot assign to CONSTANT')
-
-        #     if type(value) is not list:
-        #         self.check_type(data_type, value, var_name)
-        #         self.CURRENT_SCOPE.add(var_name, value)
-        #     else:
-        #         # FIXME September 20, 2019: Does not work for 2D+ ARRAY
-        #         for i in range(len(data_type.dimensions)):
-        #             if len(value) == (data_type.dimensions[i][1] - data_type.dimensions[i][0] + 1):
-        #                 for j in range(data_type.dimensions[i][0], data_type.dimensions[i][1] + 1):
-
-        #                     offset = j - data_type.dimensions[i][0]
-
-        #                     self.check_type(
-        #                          data_type.data_type, value[offset], var_name)
-
-        #                     if self.CURRENT_SCOPE.VALUES.get(var_name):
-        #                         self.CURRENT_SCOPE.VALUES[var_name]['[{}]'.format(str(j))] = value[offset]
-        #                     else:
-        #                         self.CURRENT_SCOPE.add(
-        #                             var_name, {'[{}]'.format(str(j)): value[offset]})
-        #             else:
-        #                 Error().index_error(var_name)
-        # else:
-
-        #     data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name[0])
-        #     if data_type is not None:
-        #         self.check_type(data_type.data_type, value, var_name[0])
-
-        #         dimensions = var_name[1]
-
-        #         # Checks if the number of dimensions(rank) of both arrays is the same
-        #         if len(dimensions) != len(data_type.dimensions):
-        #             Error().index_error(var_name[0])
-
-        #         # Checks if the index is within upper and lower bound limits
-        #         for i in range(len(dimensions)):
-        #             if dimensions[i] < data_type.dimensions[i][0] or dimensions[i] > data_type.dimensions[i][1]:
-        #                 Error().index_error(var_name[0])
-
-        #             # TODO September 20, 2019: Try making this elegant (remove if)
-        #             if self.CURRENT_SCOPE.VALUES.get(var_name[0]):
-        #                 self.CURRENT_SCOPE.VALUES[var_name[0]][str(
-        #                     dimensions)] = value
-        #             else:
-        #                 self.CURRENT_SCOPE.add(
-        #                     var_name[0], {str(dimensions): value})
-        #     else:
-        #         Error().name_error(var_name)
 
     def visit_VariableName(self, node):
         var_name = node.value
@@ -297,7 +238,12 @@ class Interpreter():
             indexes.append(self.visit(index))
 
         dimensions = indexes
+
+        if getattr(node, 'assign_value', None) == None:
+            return [var_name, indexes]
+
         value = self.visit(node.assign_value)
+        delattr(node, 'assign_value')
 
         data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name)
         if data_type is not None:
@@ -357,14 +303,43 @@ class Interpreter():
     # START: Type Assignment
 
     def visit_TypeName(self, node):
-        object_ = self.visit(node.object_)
-        property_ = self.visit(node.property_)
+        object_name = self.visit(node.object_name)
+        property_name = self.visit(node.property_name)
 
-        return [object_, property_]
+        if getattr(node, 'assign_value', None) == None:
+            return object_name
+
+        value = self.visit(node.assign_value)
+        delattr(node, 'assign_value')
+
+        if type(object_name) == list:
+            pass
+        else:
+            type_name = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(object_name)
+
+            if type_name is not None:
+                data_type = self.CURRENT_SCOPE.DATA_TYPES[type_name]
+            else:
+                Error().unbound_local_error(object_name)
+
+            if data_type.SYMBOL_TABLE.lookup(property_name) is not None:
+
+                if self.CURRENT_SCOPE.VALUES.get(object_name) is None:
+                    self.CURRENT_SCOPE.add(object_name, {property_name: value})
+                else:
+                    self.CURRENT_SCOPE.VALUES[object_name][property_name] = value
+            else:
+                Error().name_error('{}.{} does not exist'.format(object_name, property_name))
 
     def visit_TypeValue(self, node):
-        # TODO November 01, 2019: The time has come to complete this after 49 days...
-        pass
+        object_name = self.visit(node.object_name)
+        property_name = self.visit(node.property_name)
+
+        if self.CURRENT_SCOPE.VALUES.get(object_name) is not None:
+            if property_name in self.CURRENT_SCOPE.VALUES[object_name].keys():
+                return self.CURRENT_SCOPE.VALUES[object_name][property_name]
+        else:
+            Error().unbound_local_error(object_name)
 
     # END: Type Assignment
 
@@ -566,7 +541,7 @@ class Interpreter():
                         except:
                             Error().reference_error('A variable must be passed into BYREF')
 
-                        self.CURRENT_SCOPE.SYMBOL_TABLE.SYMBOL_TABLE[var_name].parent_name = parent_name
+                        self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name).parent_name = parent_name
 
                     type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name)
                     self.check_type(type, value, var_name)
@@ -580,7 +555,7 @@ class Interpreter():
                     if reference_type == 'BYREF':
                         current_value = self.CURRENT_SCOPE.VALUES.get(var_name)
 
-                        parent_name = self.CURRENT_SCOPE.SYMBOL_TABLE.SYMBOL_TABLE[var_name].parent_name
+                        parent_name = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name).parent_name
 
                         self.CURRENT_SCOPE.PARENT_SCOPE.VALUES[parent_name] = current_value
 

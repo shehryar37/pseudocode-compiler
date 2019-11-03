@@ -137,6 +137,7 @@ class SyntaxAnalysis():
             node = self.builtin_function()
         elif token.value == 'CALL':
             node = self.call()
+        # TODO November 02, 2019: Add reccognition for TYPE
         elif token.type == 'PARENTHESIS':
             if self.current_token.value == '(':
                 self.check_token_value('(')
@@ -262,6 +263,8 @@ class SyntaxAnalysis():
 
     def variable_name(self):
         # variable (indexes)*
+        # TODO November 02, 2019: Change begins here
+
         object_ = VariableName(self.current_token)
         self.check_token_type('VARIABLE')
 
@@ -305,7 +308,8 @@ class SyntaxAnalysis():
 
         if self.current_token.value == '.':
             self.check_token_type('PERIOD')
-            object_ = TypeValue(object_, self.variable_name())
+
+            object_ = TypeValue(VariableName(object_), self.variable_name())
 
         return object_
 

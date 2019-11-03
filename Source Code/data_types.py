@@ -22,7 +22,6 @@ class Array():
         self.data_type = data_type
 
 
-class Type():
-    def __init__(self, object_, property_):
-        self.object_ = object_
-        self.property = property_
+# class Type():
+#     def __init__(self, object_name):
+#         self.object_name = object_name
