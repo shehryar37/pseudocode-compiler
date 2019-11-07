@@ -53,7 +53,7 @@ class Declarations(AST):
         self.declarations = variable_declarations
 
 
-class VariableDeclaration(AST):
+class Declaration(AST):
     def __init__(self, variable, data_type):
         self.variable = variable
         self.data_type = data_type
