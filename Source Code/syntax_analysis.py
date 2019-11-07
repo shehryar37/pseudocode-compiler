@@ -202,7 +202,7 @@ class SyntaxAnalysis():
         data_type = self.data_type()
 
         declarations = [
-            VariableDeclaration(variable, data_type)
+            Declaration(variable, data_type)
             for variable in variables
         ]
 

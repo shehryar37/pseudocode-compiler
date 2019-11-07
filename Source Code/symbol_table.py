@@ -10,7 +10,6 @@ class SymbolTable():
 
     def lookup(self, var_name):
         try:
-            value = self.SYMBOL_TABLE.get(var_name).var_type
-            return value
+            return self.SYMBOL_TABLE.get(var_name)
         except:
             return None
