@@ -87,7 +87,7 @@ class Array():
 
         for i in range(len(indexes) - 1):
             try:
-                array_indexes = self.value.get(indexes[i])
+                array_indexes = array_indexes.get(indexes[i])
             except:
                 # TODO November 07, 2019: Find a way to output the name of the array
                 Error().index_error('Index out of bounds')
