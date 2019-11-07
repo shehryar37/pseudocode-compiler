@@ -90,9 +90,9 @@ class Interpreter():
         constant_name = self.visit(node.constant)
         value = self.visit(node.value)
 
-        constant_metadata = ConstantType(value)
-        self.CURRENT_SCOPE.declare(constant_name, constant_metadata)
-        self.CURRENT_SCOPE.assign(constant_name, constant_metadata.declare(value))
+        constant_metadata = Constant(value)
+        self.CURRENT_SCOPE.SYMBOL_TABLE.add(constant_name, constant_metadata)
+        self.CURRENT_SCOPE.add(constant_name, value)
 
     # END: Constants
 
@@ -102,18 +102,18 @@ class Interpreter():
         for declaration in declarations.declarations:
             self.visit(declaration)
 
-    def visit_Declaration(self, declaration):
-        name = self.visit(declaration.variable)
-        metadata = self.visit(declaration.data_type)
+    def visit_VariableDeclaration(self, declaration):
+        variable_name = self.visit(declaration.variable)
 
-        self.CURRENT_SCOPE.declare(name, metadata)
-        self.CURRENT_SCOPE.assign(name, metadata.declare())
+        variable_metadata = Variable(self.visit(declaration.data_type))
+
+        self.CURRENT_SCOPE.SYMBOL_TABLE.add(variable_name, variable_metadata)
 
     def visit_DataType(self, data_type):
         data_type = data_type.value
 
         if data_type in self.CURRENT_SCOPE.DATA_TYPES.keys():
-            return VariableType(data_type)
+            return data_type
         else:
             Error().type_error('TYPE {} has not been initialized'.format(data_type))
 
@@ -122,10 +122,12 @@ class Interpreter():
     # START: Array Declaration
 
     def visit_Array(self, node):
-        data_type = self.visit(node.data_type).data_type
+        data_type = self.visit(node.data_type)
         dimensions = self.visit(node.dimensions)
 
-        return ArrayType(dimensions, data_type)
+        array = Array(dimensions, data_type)
+
+        return array
 
     def visit_Dimensions(self, dimensions):
         dimension_list = []
@@ -179,53 +181,95 @@ class Interpreter():
     # START: Variable Assignment
 
     def visit_Assignment(self, node):
-        name = self.visit(node.variable)
-        value = self.visit(node.expression)
-
-        if type(name) is not list:
-            metadata = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(name)
-            if type(metadata) == VariableType:
-                self.check_type(metadata.data_type, value, name)
-                self.CURRENT_SCOPE.assign(name, value)
-            elif type(metadata) == ConstantType:
-                Error().name_error('Cannot assign to CONSTANT')
-            elif type(metadata) == ArrayType:
-                # Figure this out later
-                pass
-            else:
-                Error().unbound_local_error(name)
-        elif type(name) is list:
-            metadata = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(name[0])
-            if type(metadata) == ArrayType:
-                indexes = name[1]
-                name = name[0]
-
-                self.CURRENT_SCOPE.assign(name, value, indexes)
+        setattr(node.variable, 'assign_value', node.expression)
+        self.visit(node.variable)
 
     def visit_VariableName(self, node):
-        name = node.value
+        var_name = node.value
 
-        return name
+        if getattr(node, 'assign_value', None) == None:
+            return var_name
+
+        value = self.visit(node.assign_value)
+
+        delattr(node, 'assign_value')
+
+        data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name)
+        if data_type is None:
+            Error().unbound_local_error(var_name)
+        if data_type == 'CONSTANT':
+            Error().name_error('Cannot assign to CONSTANT')
+
+        if type(value) is not list:
+            self.check_type(data_type, value, var_name)
+            self.CURRENT_SCOPE.add(var_name, value)
+        else:
+            # FIXME September 20, 2019: Does not work for 2D+ ARRAY
+            for i in range(len(data_type.dimensions)):
+                if len(value) == (data_type.dimensions[i][1] - data_type.dimensions[i][0] + 1):
+                    for j in range(data_type.dimensions[i][0], data_type.dimensions[i][1] + 1):
+
+                        offset = j - data_type.dimensions[i][0]
+
+                        self.check_type(data_type.data_type,
+                                        value[offset], var_name)
+                        if self.CURRENT_SCOPE.VALUES.get(var_name):
+                            self.CURRENT_SCOPE.VALUES[var_name]['[{}]'.format(
+                                str(j))] = value[offset]
+                        else:
+                            self.CURRENT_SCOPE.add(
+                                var_name, {'[{}]'.format(str(j)): value[offset]})
+                else:
+                    Error().index_error(var_name)
 
     def visit_VariableValue(self, node):
-        name = node.value
+        var_name = node.value
 
-        return self.check_declaration(name)
+        return self.check_declaration(var_name)
 
     # END: Variable Assignment
 
     # START: Array Assignment
 
     def visit_ElementName(self, node):
-
+        var_name = self.visit(node.variable)
         indexes = []
         for index in node.indexes:
             indexes.append(self.visit(index))
 
-        return [node.value, indexes]
+        dimensions = indexes
+
+        if getattr(node, 'assign_value', None) == None:
+            return [var_name, indexes]
+
+        value = self.visit(node.assign_value)
+        delattr(node, 'assign_value')
+
+        data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name)
+        if data_type is not None:
+            self.check_type(data_type.data_type, value, var_name)
+
+            # Checks if the number of dimensions(rank) of both arrays is the same
+            if len(dimensions) != len(data_type.dimensions):
+                Error().index_error(var_name[0])
+
+            # Checks if the index is within upper and lower bound limits
+            for i in range(len(dimensions)):
+                if dimensions[i] < data_type.dimensions[i][0] or dimensions[i] > data_type.dimensions[i][1]:
+                    Error().index_error(var_name)
+
+                # TODO September 20, 2019: Try making this elegant (remove if)
+                if self.CURRENT_SCOPE.VALUES.get(var_name):
+                    self.CURRENT_SCOPE.VALUES[var_name][str(
+                        dimensions)] = value
+                else:
+                    self.CURRENT_SCOPE.add(
+                        var_name, {str(dimensions): value})
+        else:
+            Error().name_error(var_name)
 
     def visit_ElementValue(self, node):
-        name = node.value
+        var_name = node.value
 
         indexes = []
 
@@ -233,17 +277,14 @@ class Interpreter():
            indexes.append(self.visit(index))
 
 
-        if self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(name) is None:
-            raise NameError(name)
+        if self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name) is None:
+            raise NameError(var_name)
         else:
             try:
-                value = self.CURRENT_SCOPE.get(name)
-                for index in indexes:
-                    value = value.get(index)
-
+                value = self.CURRENT_SCOPE.VALUES.get(var_name).get(str(indexes))
                 return value
             except:
-                raise Error().index_error(name)
+                raise UnboundLocalError(repr(var_name))
 
 
     def visit_Index(self, node):
@@ -333,7 +374,7 @@ class Interpreter():
                     self.try_type(type_, value, variable_name)
 
                     if self.CURRENT_SCOPE.VALUES.get(variable_name[0]):
-                        self.CURRENT_SCOPE.VALUES[name[0]][str(dimensions)] = value
+                        self.CURRENT_SCOPE.VALUES[var_name[0]][str(dimensions)] = value
                     else:
                         self.CURRENT_SCOPE.add(variable_name[0], {str(dimensions) : value})
 
@@ -345,9 +386,7 @@ class Interpreter():
     # START: Output
 
     def visit_Output(self, node):
-        output = self.visit(node.output)
-        if output is not None:
-            print(output)
+        print(self.visit(node.output))
 
     # END: Output
 
@@ -434,16 +473,17 @@ class Interpreter():
 
     def visit_Iteration(self, node):
         self.visit(node.assignment)
-        name = self.visit(node.variable)
-        start = self.CURRENT_SCOPE.get(name)
+        variable = node.variable
+        start = self.CURRENT_SCOPE.VALUES.get(self.visit(variable))
+        var_name = node.variable.value
         end = self.visit(node.end)
         step = self.visit(node.step)
         value = start
 
         while value <= end:
             self.visit(node.block)
-            value = self.CURRENT_SCOPE.get(name) + step
-            self.CURRENT_SCOPE.assign(name, value)
+            self.CURRENT_SCOPE.VALUES[var_name] += step
+            value = self.CURRENT_SCOPE.VALUES[var_name]
 
     # END: Iteration
 
@@ -493,7 +533,7 @@ class Interpreter():
                 for i in range(0, len(parameters)):
                     value = parameters[i]
                     reference_type = self.CURRENT_SCOPE.parameters[i][0]
-                    name = self.CURRENT_SCOPE.parameters[i][1]
+                    var_name = self.CURRENT_SCOPE.parameters[i][1]
 
                     if reference_type == 'BYREF':
                         try:
@@ -501,29 +541,29 @@ class Interpreter():
                         except:
                             Error().reference_error('A variable must be passed into BYREF')
 
-                        self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(name).parent_name = parent_name
+                        self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name).parent_name = parent_name
 
-                    type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(name)
-                    self.check_type(type, value, name)
-                    self.CURRENT_SCOPE.add(name, parameters[i])
+                    type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name)
+                    self.check_type(type, value, var_name)
+                    self.CURRENT_SCOPE.add(var_name, parameters[i])
 
                 return_value = self.visit(self.CURRENT_SCOPE.block)
 
                 for parameter in self.CURRENT_SCOPE.parameters:
                     reference_type = parameter[0]
-                    name = parameter[1]
+                    var_name = parameter[1]
                     if reference_type == 'BYREF':
-                        current_value = self.CURRENT_SCOPE.VALUES.get(name)
+                        current_value = self.CURRENT_SCOPE.VALUES.get(var_name)
 
-                        parent_name = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(name).parent_name
+                        parent_name = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name).parent_name
 
-                        self.CURRENT_SCOPE.PARENT_SCOPE.assign(parent_name, current_value)
+                        self.CURRENT_SCOPE.PARENT_SCOPE.VALUES[parent_name] = current_value
 
                 self.CURRENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
                 self.PARENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
 
                 if scope.return_type != None:
-                    self.check_type(scope.return_type, return_value, name)
+                    self.check_type(scope.return_type, return_value, var_name)
                     return return_value
 
             else:
@@ -542,7 +582,6 @@ class Interpreter():
 
         parameters = []
 
-        # TODO November 04, 2019: This will probably need to be updated
         for parameter in node.parameters:
             variable, data_type, reference_type = self.visit(parameter)
             metadata = Variable(data_type, None, reference_type)
@@ -609,32 +648,29 @@ class Interpreter():
 
     # START: Helper Functions
 
-    def check_type(self, type, value, name):
+    def check_type(self, type, value, var_name):
         if type in self.CURRENT_SCOPE.DATA_TYPES:
             if not isinstance(value, self.CURRENT_SCOPE.DATA_TYPES[type]):
-                Error().type_error(name)
+                Error().type_error(var_name)
 
-    def try_type(self, type_, value, name):
+    def try_type(self, type_, value, var_name):
         if type_ is not None:
             if type_ in self.CURRENT_SCOPE.DATA_TYPES.keys():
                 type_ = self.CURRENT_SCOPE.DATA_TYPES[type_]
+
             try:
                 return type_(value)
             except:
-                Error().type_error(repr(name))
+                Error().type_error(repr(var_name))
 
-    def check_declaration(self, name):
-        if self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(name) is None:
-            Error().name_error(name)
+    def check_declaration(self, var_name):
+        if self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(var_name) is None:
+            Error().name_error(var_name)
 
         try:
-            value = self.CURRENT_SCOPE.get(name)
-
-            if value is None:
-                Error().unbound_local_error(name)
-
+            value = self.CURRENT_SCOPE.VALUES.get(var_name)
             return value
         except:
-            Error().unbound_local_error(name)
+            Error().unbound_local_error(var_name)
 
     # END: Helper Functions

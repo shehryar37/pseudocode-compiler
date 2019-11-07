@@ -18,21 +18,8 @@ class Scope():
             self.init_data_types()
             self.VALUES = {}
 
-    def declare(self, name, metadata):
-        self.SYMBOL_TABLE.add(name, metadata)
-
-    def assign(self, variable_name, *data):
-        if self.VALUES.get(variable_name) is None:
-            self.VALUES[variable_name] = data[0]
-        else:
-            self.VALUES[variable_name].assign(data)
-
-    def get(self, variable_name):
-
-        if self.VALUES.get(variable_name) is not None:
-            return self.VALUES.get(variable_name).value
-        else:
-            return None
+    def add(self, var_name, value):
+        self.VALUES[var_name] = value
 
     def init_data_types(self):
         self.DATA_TYPES['INTEGER'] = int

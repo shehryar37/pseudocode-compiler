@@ -49,11 +49,11 @@ class ConstantDeclaration(AST):
 
 
 class Declarations(AST):
-    def __init__(self, declarations):
-        self.declarations = declarations
+    def __init__(self, variable_declarations):
+        self.declarations = variable_declarations
 
 
-class Declaration(AST):
+class VariableDeclaration(AST):
     def __init__(self, variable, data_type):
         self.variable = variable
         self.data_type = data_type
@@ -102,15 +102,16 @@ class Assignment(AST):
         self.expression = expression
 
 
-class VariableName(AST):
+class VariableValue(AST):
     def __init__(self, token):
         self.token = token
         self.value = token.value
 
 
-class VariableValue(VariableName):
+class VariableName(AST):
     def __init__(self, token):
-        super().__init__(token)
+        self.token = token
+        self.value = token.value
 
 
 class ElementName(AST):
@@ -120,10 +121,11 @@ class ElementName(AST):
         self.value = variable.value
 
 
-
-class ElementValue(ElementName):
+class ElementValue(AST):
     def __init__(self, variable, indexes):
-        super().__init__(variable, indexes)
+        self.variable = variable
+        self.indexes = indexes
+        self.value = variable.value
 
 
 class AssignArray(AST):
@@ -325,8 +327,10 @@ class TypeName(AST):
         self.object_name = object_name
         self.property_name = property_name
 
-class TypeValue(TypeName):
+
+class TypeValue(AST):
     def __init__(self, object_name, property_name):
-        super().__init__(object_name, property_name)
+        self.object_name = object_name
+        self.property_name = property_name
 
  # END: Type
