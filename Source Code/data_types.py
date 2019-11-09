@@ -49,7 +49,7 @@ class Variable():
         self.value = None
 
     def assign(self, value):
-        """Assgins a value to a Variable
+        """Assigns a value to a Variable
 
         Arguments:
             value {int, str, bool, float} -- The value to be stored in a Variable
@@ -93,7 +93,7 @@ class ConstantType(DataType):
 
 class Constant():
     def __init__(self, value):
-        """Decalares and assigms a value to a constant
+        """Decalares and assigns a value to a constant
 
         Arguments:
             value {int, str, bool, float} -- Assign a value to Constant
@@ -155,11 +155,22 @@ class ArrayType(DataType):
 
 class Array():
     def __init__(self, value):
+        """Decalares and assigns a value to an array
+
+        Arguments:
+            value {int, str, bool, float} -- Assign a value to Array
+        """
         self.value = value
 
     def assign(self, data):
+        """Assigns a value to a Variable
+
+        Arguments:
+            data {tuple} -- The data to be stored in an Array
+        """
         value = data[0]
-        if value is not list:
+        if type(value) is not list:
+            # when value is not a list then an index of the array must be specified
             indexes = data[1]
             array_indexes = self.value
 

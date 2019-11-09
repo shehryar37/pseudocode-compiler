@@ -1,7 +1,7 @@
 from function import BuiltInFunction
-from scope import Scope
+from scope import *
 from error import Error
-from symbol_table import *
+from data_types import *
 from copy import deepcopy
 
 
@@ -306,37 +306,20 @@ class Interpreter():
     # START: Input
 
     def visit_AssignInput(self, node):
-        variable_name = self.visit(node.input_node)
+        name = self.visit(node.input_node)
         value = input(node.input_node.input_string)
 
-        if type(variable_name) != list:
-            type_ = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(variable_name)
-
-            value = self.try_type(type_, value, variable_name)
-
-            self.CURRENT_SCOPE.add(variable_name, value)
+        if type(name) is not list:
+            data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(name).data_type
+            value = self.try_type(data_type, value, name)
+            self.CURRENT_SCOPE.assign(name, value)
         else:
-            data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(variable_name[0])
-            if data_type is not None:
-                dimensions = variable_name[1]
+            data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(name[0]).data_type
+            value = self.try_type(data_type, value, name)
+            dimensions = name[1]
+            name = name[0]
 
-                # Checks if the number of dimensions(rank) of both arrays is the same
-                if len(dimensions) != len(data_type.dimensions):
-                    Error().index_error(variable_name)
-
-                # Checks if the index is within upper and lower bound limits
-                for i in range(len(dimensions)):
-                    if dimensions[i] < data_type.dimensions[i][0] or dimensions[i] > data_type.dimensions[i][1]:
-                        Error().index_error(variable_name[0])
-
-                    type_ = data_type.data_type
-
-                    self.try_type(type_, value, variable_name)
-
-                    if self.CURRENT_SCOPE.VALUES.get(variable_name[0]):
-                        self.CURRENT_SCOPE.VALUES[name[0]][str(dimensions)] = value
-                    else:
-                        self.CURRENT_SCOPE.add(variable_name[0], {str(dimensions) : value})
+            self.CURRENT_SCOPE.assign(name, value, dimensions)
 
     def visit_Input(self, node):
         return self.visit(node.variable)
@@ -613,17 +596,18 @@ class Interpreter():
 
     # START: Helper Functions
 
-    def check_type(self, type, value, name):
-        if type in self.CURRENT_SCOPE.DATA_TYPES:
-            if not isinstance(value, self.CURRENT_SCOPE.DATA_TYPES[type]):
+    def check_type(self, data_type, value, name):
+        if data_type in self.CURRENT_SCOPE.DATA_TYPES:
+            if not isinstance(value, self.CURRENT_SCOPE.DATA_TYPES[data_type]):
                 Error().type_error(name)
 
-    def try_type(self, type_, value, name):
-        if type_ is not None:
-            if type_ in self.CURRENT_SCOPE.DATA_TYPES.keys():
-                type_ = self.CURRENT_SCOPE.DATA_TYPES[type_]
+    def try_type(self, data_type, value, name):
+        if data_type is not None:
+            if data_type in self.CURRENT_SCOPE.DATA_TYPES.keys():
+                data_type = self.CURRENT_SCOPE.DATA_TYPES[data_type]
+
             try:
-                return type_(value)
+                return data_type(value)
             except:
                 Error().type_error(repr(name))
 

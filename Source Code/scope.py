@@ -1,4 +1,3 @@
-from symbol_table import SymbolTable
 from copy import deepcopy
 
 
@@ -75,3 +74,32 @@ class Scope():
     def clear(self):
         self.VALUES = None
         self.parameters = None
+
+
+class SymbolTable():
+    def __init__(self):
+        """Initializes a SymbolTable"""
+        self.SYMBOL_TABLE = {}
+
+    def add(self, name, metadata):
+        """Adds a value to SYMBOL_TABLE
+
+        Arguments:
+            name {str} -- The name of the instance
+            metadata {Class(DataType)} -- The type and reference details of the instance
+        """
+        self.SYMBOL_TABLE[name] = metadata
+
+    def lookup(self, name):
+        """Looks up a value from SYMBOL_TABLE
+
+        Arguments:
+            name {str} -- the name of the instance
+
+        Returns:
+            Class(DataType) -- The metadata of the instance
+        """
+        try:
+            return self.SYMBOL_TABLE.get(name)
+        except:
+            return None

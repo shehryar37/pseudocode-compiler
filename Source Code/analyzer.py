@@ -1,7 +1,6 @@
-from lexer import Lexer
+from lexer import *
 from error import Error
 from ast import *
-from tokens import Token
 
 
 class Analyzer():
