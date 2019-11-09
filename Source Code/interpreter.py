@@ -205,18 +205,21 @@ class Interpreter():
             elif type(metadata) == TypeType:
                 field_name = name[1]
                 field_metadata = metadata.fields.get(field_name)
+                name = name[0]
 
-                if field_metadata is not None:
-                    name = name[0]
-                    self.check_type(field_metadata.data_type, value, name)
-                else:
+                if self.CURRENT_SCOPE.get(name) is None:
+                    Error().unbound_local_error(name)
+
+                if field_metadata is None:
                     Error().name_error('{}.{}'.format(name, field_name))
 
+                self.check_type(field_metadata.data_type, value, name)
                 self.CURRENT_SCOPE.assign(name, value, field_name)
+            else:
+                Error().unbound_local_error(name[0])
 
     def visit_VariableName(self, node):
         name = node.value
-
         return name
 
     def visit_VariableValue(self, node):
@@ -292,9 +295,9 @@ class Interpreter():
 
     # START: Input
 
-    def visit_AssignInput(self, node):
-        name = self.visit(node.input_node)
-        value = input(node.input_node.input_string)
+    def visit_Input(self, node):
+        name = self.visit(node.variable)
+        value = input(node.input_string)
 
         if type(name) is not list:
             data_type = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(name).data_type
@@ -307,9 +310,6 @@ class Interpreter():
             name = name[0]
 
             self.CURRENT_SCOPE.assign(name, value, dimensions)
-
-    def visit_Input(self, node):
-        return self.visit(node.variable)
 
     # END: Input
 

@@ -93,7 +93,7 @@ class Lexer():
                 self.advance()
                 return token
             else:
-                Error.syntax_error(Error, self.current_char, self.line_number)
+                Error().syntax_error(self.current_char, self.line_number)
 
         return Token('EOF', 'EOF')
 

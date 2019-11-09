@@ -99,7 +99,4 @@ class SymbolTable():
         Returns:
             Class(DataType) -- The metadata of the instance
         """
-        try:
-            return self.SYMBOL_TABLE.get(name)
-        except:
-            return None
+        return self.SYMBOL_TABLE.get(name)

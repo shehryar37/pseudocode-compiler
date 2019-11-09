@@ -70,3 +70,6 @@ class Error():
 
     def reference_error(self, text):
         raise ReferenceError(repr(text))
+
+    def eof_error(self, text):
+        raise EOFError(repr(text))

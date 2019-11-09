@@ -50,7 +50,7 @@ class Analyzer():
             elif value == 'RETURN':
                 node = self.return_value()
             elif value == 'INPUT':
-                node = self.assign_input()
+                node = self.input()
             elif value == 'OUTPUT':
                 node = self.output()
             elif value == 'DECLARE':
@@ -77,6 +77,8 @@ class Analyzer():
                 node = self.close_file()
             elif value == 'TYPE':
                 node = self.declare_type()
+        elif token.type == 'EOF':
+            Error().eof_error('Unexpected EOF')
         elif token.type == 'VARIABLE':
             node = self.assignment()
         else:
@@ -140,6 +142,11 @@ class Analyzer():
         return node
 
     def term(self):
+        """Verifies a term within an expression and maintains order of precedence
+
+        Returns:
+            BinaryOperation -- The left and right part of the operation followed by the operator itself
+        """
         node = self.factor()
 
         while self.current_token.value in ('*', '/', 'DIV', 'MOD', '^'):
@@ -151,6 +158,11 @@ class Analyzer():
         return node
 
     def factor(self):
+        """Verifies a factor within a term
+
+        Returns:
+            node (of any class) -- the value of the factor encapsulated in its respective AST class
+        """
         token = self.current_token
         if token.type == 'OPERATION':
             if token.value == '+':
@@ -179,7 +191,6 @@ class Analyzer():
             node = self.builtin_function()
         elif token.value == 'CALL':
             node = self.call()
-        # TODO November 02, 2019: Add reccognition for TYPE
         elif token.type == 'PARENTHESIS':
             if self.current_token.value == '(':
                 self.check_token_value('(')
@@ -201,6 +212,10 @@ class Analyzer():
                 node = AssignArray(elements)
         elif token.type == 'VARIABLE':
             node = self.variable_value()
+
+            if self.current_token.value == '.':
+                self.check_token_type('PERIOD')
+                node = TypeValue(node, self.variable_name())
         else:
             raise Error().syntax_error(self.lexer.current_char, self.lexer.line_number)
         return node
@@ -210,6 +225,13 @@ class Analyzer():
     # START: Constants
 
     def constant(self):
+        """Verifies the declaration for a CONSTANT declaration
+
+        Returns:
+            ConstantDeclaration -- The name and value of CONSTANT encapsulated in the ConstantDeclaration AST class
+        """
+
+        # CONSTANT constant <- expression
         self.check_token_value('CONSTANT')
         constant = VariableName(self.current_token)
         self.check_token_type('VARIABLE')
@@ -223,14 +245,23 @@ class Analyzer():
     # START: Declaration
 
     def declarations(self):
+        """Verifies the declarations within a statement
+
+        Returns:
+            Declarations -- The declarations made within a statement
+        """
+
         # DECLARE variable_declarations COLON type
         self.check_token_value('DECLARE')
-        declarations = Declarations(self.variable_declarations())
-        return declarations
+        return Declarations(self.variable_declarations())
 
     def variable_declarations(self):
-        # variable_declaration COMMA (variable_declaration)*
+        """Verifies the declaration
 
+        Returns:
+            list{Declaration} -- A list of all declarations with their data type
+        """
+        # variable_declaration COMMA (variable_declaration)*
         variables = [VariableName(self.current_token)]
         self.check_token_type('VARIABLE')
 
@@ -251,6 +282,11 @@ class Analyzer():
         return declarations
 
     def data_type(self):
+        """Verifies the data type for declarations
+
+        Returns:
+            DataType/Array -- The data type (and dimensions in case of ARRAY)
+        """
         token = self.current_token
         self.check_token_type('VARIABLE')
 
@@ -270,6 +306,11 @@ class Analyzer():
     # START: Array Declaration
 
     def dimensions(self):
+        """Verifies the dimensions used in declaring an ARRAY
+
+        Returns:
+            Dimensions -- A list of upper and lower bounds of an ARRAY
+        """
         # expression COLON expression (COMMA expression COLON expression)*
         dimensions = []
         lower_bound = self.bound()
@@ -287,6 +328,10 @@ class Analyzer():
         return Dimensions(dimensions)
 
     def bound(self):
+        """
+        Returns:
+            Bound -- The bound of an ARRAY
+        """
         return Bound(self.expression())
 
     # END: Array Declaration
@@ -296,16 +341,28 @@ class Analyzer():
     # START: Variable Assignment
 
     def assignment(self):
+        """Verifies the proper assignment to an instance
+
+        Returns:
+            Assignment -- Contains the name of the instance to be assigned to and the value
+        """
+
+        # variable_name ASSIGNMENT expression
         left = self.variable_name()
-        self.check_token_value('<-')
+        self.check_token_type('ASSIGNMENT')
         right = self.expression()
         assignment = Assignment(left, right)
 
         return assignment
 
     def variable_name(self):
-        # variable (indexes)*
+        """Verifies the syntax of the name of various types of instances
 
+        Returns:
+            VariableName/ElementName/TypeName -- The name of the instance
+        """
+
+        # variable (indexes)*
         object_ = VariableName(self.current_token)
         self.check_token_type('VARIABLE')
 
@@ -325,13 +382,22 @@ class Analyzer():
             self.check_token_type('PERIOD')
             object_ = TypeName(object_, self.variable_name())
 
-
         return object_
 
     def index(self):
+        """Verifies an index that is within [ and ]
+
+        Returns:
+            Index -- The expression that will make up the index
+        """
         return Index(self.expression())
 
     def variable_value(self):
+        """Verifies the syntax of the value of various types of instances
+
+        Returns:
+            VariableValue/ElementValue/TypeValue -- The value of the instance
+        """
         object_ = VariableValue(self.current_token)
         self.check_token_type('VARIABLE')
 
@@ -358,13 +424,15 @@ class Analyzer():
 
     # START: Input
 
-    def assign_input(self):
-        self.check_token_value('INPUT')
-
-        assign_input = AssignInput(self.input())
-        return assign_input
-
     def input(self):
+        """Verifies the string given and the instance it will be stored in
+
+        Returns:
+            Input -- The string to be displayed on the console and the instance where the value entered will be stored
+        """
+
+        # INPUT (STRING) VARIABLE
+        self.check_token_value('INPUT')
         if self.current_token.type == 'STRING':
             input_string = self.current_token.value
             self.check_token_type('STRING')
@@ -388,12 +456,16 @@ class Analyzer():
            var_node = ElementName(var_node, indexes)
 
 
-        node = Input(input_string, var_node)
-        return node
+        return Input(input_string, var_node)
 
     # END: Input
 
     def logical_expression(self):
+        """Verifies the syntax for a binary logical operation
+
+        Returns:
+            BinaryLogicalOperation -- The operator and operations on its left and right
+        """
         node = self.logical_term()
         while self.current_token.value == 'OR':
             token = Operator(self.current_token)

@@ -229,5 +229,4 @@ class Type():
 
         self.value[field].value = value
 
-
     # END: Type
