@@ -197,11 +197,22 @@ class Interpreter():
         elif type(name) is list:
             metadata = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(name[0])
             if type(metadata) == ArrayType:
-                self.check_type(metadata.data_type, value, name)
-                name = name[0]
                 indexes = name[1]
+                name = name[0]
+                self.check_type(metadata.data_type, value, name)
 
                 self.CURRENT_SCOPE.assign(name, value, indexes)
+            elif type(metadata) == TypeType:
+                field_name = name[1]
+                field_metadata = metadata.fields.get(field_name)
+
+                if field_metadata is not None:
+                    name = name[0]
+                    self.check_type(field_metadata.data_type, value, name)
+                else:
+                    Error().name_error('{}.{}'.format(name, field_name))
+
+                self.CURRENT_SCOPE.assign(name, value, field_name)
 
     def visit_VariableName(self, node):
         name = node.value
@@ -263,43 +274,19 @@ class Interpreter():
     # START: Type Assignment
 
     def visit_TypeName(self, node):
-        object_name = self.visit(node.object_name)
-        property_name = self.visit(node.property_name)
+        name = self.visit(node.object_name)
+        field = self.visit(node.field_name)
 
-        if getattr(node, 'assign_value', None) == None:
-            return object_name
-
-        value = self.visit(node.assign_value)
-        delattr(node, 'assign_value')
-
-        if type(object_name) == list:
-            pass
-        else:
-            type_name = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(object_name)
-
-            if type_name is not None:
-                data_type = self.CURRENT_SCOPE.DATA_TYPES[type_name]
-            else:
-                Error().unbound_local_error(object_name)
-
-            if data_type.SYMBOL_TABLE.lookup(property_name) is not None:
-
-                if self.CURRENT_SCOPE.VALUES.get(object_name) is None:
-                    self.CURRENT_SCOPE.add(object_name, {property_name: value})
-                else:
-                    self.CURRENT_SCOPE.VALUES[object_name][property_name] = value
-            else:
-                Error().name_error('{}.{} does not exist'.format(object_name, property_name))
+        return [name, field]
 
     def visit_TypeValue(self, node):
-        object_name = self.visit(node.object_name)
-        property_name = self.visit(node.property_name)
+        name = self.visit(node.object_name)
+        field_name = self.visit(node.field_name)
 
-        if self.CURRENT_SCOPE.VALUES.get(object_name) is not None:
-            if property_name in self.CURRENT_SCOPE.VALUES[object_name].keys():
-                return self.CURRENT_SCOPE.VALUES[object_name][property_name]
-        else:
-            Error().unbound_local_error(object_name)
+        try:
+            return self.CURRENT_SCOPE.get(name)[field_name].value
+        except:
+            Error().name_error('{}.{}'.format(name, field_name))
 
     # END: Type Assignment
 
@@ -527,7 +514,6 @@ class Interpreter():
 
         parameters = []
 
-        # TODO November 04, 2019: This will probably need to be updated
         for parameter in node.parameters:
             variable, data_type, reference_type = self.visit(parameter)
             metadata = data_type

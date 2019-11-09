@@ -116,7 +116,7 @@ class ArrayType(DataType):
         """Initializes an array
 
         Arguments:
-            dimensions {[[{int}]]} -- The dimensions of the array stored as a 2D list with upper and lower bounds
+            dimensions {list{list{int}}} -- The dimensions of the array stored as a 2D list with upper and lower bounds
             data_type {str} -- The data type of the object being initialized
 
         Keyword Arguments:
@@ -193,18 +193,41 @@ class Array():
 
 class TypeType(DataType):
     def __init__(self, scope, data_type, referee_name=None, reference_type='BYVAL'):
-        super().__init__(data_type, referee_name, reference_type)
-        self.scope = scope
+        """Initializes a type
 
-    fields = {}
+        Arguments:
+            scope {Scope} -- The scope where the fields of the type were declared
+            data_type {str} -- The data type of the object being initialized
+
+        Keyword Arguments:
+            referee_name {str} -- The name of the variable this instance is being copied from in the parent scope (default: {None})
+            reference_type {str} -- The type of reference being used when passing this instance as a parameter (default: {'BYVAL'})
+        """
+        super().__init__(data_type, referee_name, reference_type)
+        self.fields = scope.SYMBOL_TABLE.SYMBOL_TABLE
 
     def declare(self):
-        # FIXME November 07, 2019: This will not work for arrays
-        for field in self.scope.SYMBOL_TABLE.SYMBOL_TABLE.keys():
-            fields[field] = None
+        """Declares an array
+
+        Returns:
+            Type -- The value of the instance encapsulated inside the Type class
+        """
+        field_values = {}
+        for field in self.fields.items():
+            field_values[field[0]] = field[1].declare()
+
+        return Type(field_values)
 
 
 class Type():
-    pass
+    def __init__(self, field_values):
+        self.value = field_values
+
+    def assign(self, data):
+        value = data[0]
+        field = data[1]
+
+        self.value[field].value = value
+
 
     # END: Type

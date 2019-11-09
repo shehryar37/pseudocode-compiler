@@ -220,7 +220,7 @@ class Analyzer():
 
     # END: Constants
 
-    # START: Variable Declaration
+    # START: Declaration
 
     def declarations(self):
         # DECLARE variable_declarations COLON type
@@ -291,7 +291,7 @@ class Analyzer():
 
     # END: Array Declaration
 
-    # END: Variable Declaration
+    # END: Declaration
 
     # START: Variable Assignment
 
@@ -305,7 +305,6 @@ class Analyzer():
 
     def variable_name(self):
         # variable (indexes)*
-        # TODO November 02, 2019: Change begins here
 
         object_ = VariableName(self.current_token)
         self.check_token_type('VARIABLE')

@@ -323,14 +323,14 @@ class TypeDeclaration(AST):
 
 
 class TypeName(AST):
-    def __init__(self, object_name, property_name):
+    def __init__(self, object_name, field_name):
         self.object_name = object_name
-        self.property_name = property_name
+        self.field_name = field_name
 
 
 class TypeValue(AST):
-    def __init__(self, object_name, property_name):
+    def __init__(self, object_name, field_name):
         self.object_name = object_name
-        self.property_name = property_name
+        self.field_name = field_name
 
  # END: Type

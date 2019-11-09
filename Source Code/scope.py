@@ -51,13 +51,13 @@ class Scope():
             self.VALUES[variable_name].assign(data)
 
     def get(self, variable_name):
-        """Fetches the value of an instance stored inside VARIABLES
+        """Fetches the value of an instance stored inside VALUES
 
         Arguments:
             variable_name {str} -- The name of the variable
 
         Returns:
-            [type] -- [description]
+            int, str, float, bool -- The value of the variable
         """
         if self.VALUES.get(variable_name) is not None:
             return self.VALUES.get(variable_name).value
