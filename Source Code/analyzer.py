@@ -4,13 +4,28 @@ from ast import *
 from tokens import Token
 
 
-class SyntaxAnalysis():
+class Analyzer():
+    """Takes sequenced tokens and turns them into AST objects, sending them to Interpreter"""
+
     def __init__(self, code):
+        """Creates an instance of Analyzer
+
+        Arguments:
+            code {str} -- All the code written by the user
+        """
         self.code = code
-        self.lexer = Lexer(code)
-        self.current_token = self.lexer.next_token()
+        self.lexer = Lexer(code)        # Sends code to the Lexer
+        self.current_token = self.lexer.next_token()        # Fetches the next token
 
     def block(self, end_block):
+        """Returns a code block. Wraps entire code into this object
+
+        Arguments:
+            end_block {str} -- The block at which statements will no longer be added to this block
+
+        Returns:
+            Block -- Contains a list of Statement in it
+        """
         statement_list = []
         while self.current_token.value not in end_block:
             statement_list.append(self.statement())
@@ -19,6 +34,11 @@ class SyntaxAnalysis():
         return block
 
     def statement(self):
+        """Checks for the first token in each statement and dives into the appropriate function
+
+        Returns:
+            Class(AST) -- Class is the type of Statement that stores all tokens of the statement in it
+        """
         token = self.current_token
         value = token.value
         if token.type == 'KEYWORD':
@@ -65,17 +85,30 @@ class SyntaxAnalysis():
 
         return Statement(node)
 
-    # TODO September 20, 2019: Comment key functions
     def check_token_type(self, token_type):
+        """Checks whether the current token is semantically correct
+
+        Arguments:
+            token_type {str} -- The type of the token to be checked
+        """
         if self.current_token.type == token_type:
             token = self.current_token
+
+            # Take out the next token from Lexer
             self.current_token = self.lexer.next_token()
         else:
             Error().syntax_error(self.current_token.value, self.lexer.line_number)
 
     def check_token_value(self, token_value):
+        """Checks whether the current token is semantically correct
+
+        Arguments:
+            token_value {str} -- The value of the token to be checked
+        """
         if self.current_token.value == token_value:
             token = self.current_token
+
+            # Take out the next token from Lexer
             self.current_token = self.lexer.next_token()
         else:
             Error().token_error(self.current_token.value, self.lexer.line_number, token_value)
@@ -83,10 +116,20 @@ class SyntaxAnalysis():
     # START: Operation Handling
 
     def output(self):
+        """Verifies and returns an output statement
+
+        Returns:
+            Output -- Constains the expression to be outputted
+        """
         self.check_token_value('OUTPUT')
         return Output(self.expression())
 
     def expression(self):
+        """Verifies an expression and maintains order of precedence
+
+        Returns:
+            BinaryOperation -- The left and right part of the operation followed by the operator itself
+        """
         node = self.term()
 
         while self.current_token.value in ('+', '-'):

@@ -1,4 +1,4 @@
-from syntax_analysis import SyntaxAnalysis
+from analyzer import Analyzer
 from error import Error
 from interpreter import Interpreter
 import sys
@@ -17,9 +17,8 @@ def main():
         line = file.readline()
         code += ' EOL ' + line
 
-    parser = SyntaxAnalysis(code)
-    interpreter = Interpreter(parser)
-    interpreter.interpret()
+    analyzer = Analyzer(code)
+    interpreter = Interpreter(analyzer)
 
 
 main()

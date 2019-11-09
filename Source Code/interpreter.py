@@ -6,15 +6,14 @@ from copy import deepcopy
 
 
 class Interpreter():
-    def __init__(self, parser):
-        self.parser = parser
-        self.SCOPES = {}
-        self.PARENT_SCOPE = None
-        self.SCOPES['GLOBAL'] = Scope(self.PARENT_SCOPE, None)
-        self.CURRENT_SCOPE = self.SCOPES.get('GLOBAL')
+    """After the code has been sent to AST classes by analyzer.py, it comes here to be interpreted into python
+    """
 
-    def interpret(self):
-        tree = self.parser.block(['EOF'])
+    def __init__(self, analyzer):
+        self.SCOPES = {}
+        self.CURRENT_SCOPE = self.SCOPES['GLOBAL'] = Scope()
+
+        tree = analyzer.block(['EOF'])
         self.visit(tree)
 
     def visit(self, node):
@@ -114,6 +113,8 @@ class Interpreter():
 
         if data_type in self.CURRENT_SCOPE.DATA_TYPES.keys():
             return VariableType(data_type)
+        elif data_type in self.CURRENT_SCOPE.USER_DEFINED_DATA_TYPES.keys():
+            return TypeType(self.CURRENT_SCOPE.USER_DEFINED_DATA_TYPES[data_type],data_type)
         else:
             Error().type_error('TYPE {} has not been initialized'.format(data_type))
 
@@ -171,7 +172,7 @@ class Interpreter():
         self.CURRENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
         self.PARENT_SCOPE = self.CURRENT_SCOPE.PARENT_SCOPE
 
-        self.CURRENT_SCOPE.DATA_TYPES[type_name] = type(
+        self.CURRENT_SCOPE.USER_DEFINED_DATA_TYPES[type_name] = type(
             type_name, (), children)
 
     # END: Type Declaration
@@ -190,15 +191,15 @@ class Interpreter():
             elif type(metadata) == ConstantType:
                 Error().name_error('Cannot assign to CONSTANT')
             elif type(metadata) == ArrayType:
-                # Figure this out later
-                pass
+                self.CURRENT_SCOPE.assign(name, value)
             else:
                 Error().unbound_local_error(name)
         elif type(name) is list:
             metadata = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(name[0])
             if type(metadata) == ArrayType:
-                indexes = name[1]
+                self.check_type(metadata.data_type, value, name)
                 name = name[0]
+                indexes = name[1]
 
                 self.CURRENT_SCOPE.assign(name, value, indexes)
 
@@ -234,7 +235,7 @@ class Interpreter():
 
 
         if self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(name) is None:
-            raise NameError(name)
+            raise Error().name_error(name)
         else:
             try:
                 value = self.CURRENT_SCOPE.get(name)
@@ -546,7 +547,8 @@ class Interpreter():
         # TODO November 04, 2019: This will probably need to be updated
         for parameter in node.parameters:
             variable, data_type, reference_type = self.visit(parameter)
-            metadata = VariableType(data_type.data_type, None, reference_type)
+            metadata = data_type
+            metadata.data_type = data_type
             self.SCOPES[name].declare(variable, metadata)
             self.SCOPES[name].assign(variable, metadata.declare())
             self.SCOPES[name].parameters.append([reference_type, variable])
