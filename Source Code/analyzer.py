@@ -461,7 +461,7 @@ class Analyzer():
     # END: Input
 
     def logical_expression(self):
-        """Verifies the syntax for a binary logical operation
+        """Verifies the syntax for a binary logical operation while maintaining the order of precedence
 
         Returns:
             BinaryLogicalOperation -- The operator and operations on its left and right
@@ -476,6 +476,11 @@ class Analyzer():
         return node
 
     def logical_term(self):
+        """Verifies the syntax for a binary logical operation
+
+        Returns:
+            BinaryLogicalOperation -- The operator and operations on its left and right
+        """
         node = self.logical_factor()
 
         while self.current_token.value == 'AND':
@@ -487,6 +492,11 @@ class Analyzer():
         return node
 
     def logical_factor(self):
+        """Verifies a factor within a binary logical operation
+
+        Returns:
+            node (of any class) -- The value of a logical factor encapsulated in its respective AST class
+        """
         token = self.current_token
         if token.value == 'NOT':
             self.check_token_type('LOGICAL')
@@ -507,6 +517,11 @@ class Analyzer():
         return node
 
     def condition(self):
+        """Verifies the syntax for a conditional statement
+
+        Returns:
+            Condition -- The left and right side of a condition with the conditional operator
+        """
         # expression COMPARISON expression
         left = self.expression()
         comparison = self.current_token
@@ -519,6 +534,13 @@ class Analyzer():
     # START: Selection
 
     def selection(self):
+        """Verifies the syntax for a selection statement
+
+        Returns:
+            Selection -- A list of all selections within a block
+        """
+        #   (selection_statement)*
+        # ENDIF
         selection_list = []
 
         while self.current_token.value != 'ENDIF':
@@ -530,9 +552,14 @@ class Analyzer():
         return selection
 
     def selection_statement(self):
+        """Verifies a statement within a selection block
+
+        Returns:
+            SelectionStatement -- The conditional statement and block of code within the selection statement
+        """
         # (IF|ELSEIF condition THEN
         #   block) | ELSE block
-        if self.current_token.value != 'ELSE': # FIX THIS
+        if self.current_token.value != 'ELSE':
             self.check_token_type('KEYWORD')
             condition = self.logical_expression()
             self.check_token_value('THEN')
@@ -550,9 +577,13 @@ class Analyzer():
     # START: Case
 
     def case(self):
+        """Verifies the variable and ENDCASE of a CASE statement
+
+        Returns:
+            Case -- A list of statements within the CASE block
+        """
         # CASE OF variable
         # CASE expression COLON block
-
         case_list = []
 
         self.check_token_type('KEYWORD')
@@ -568,6 +599,14 @@ class Analyzer():
 
 
     def case_statement(self, left):
+        """Verifies a CASE statement
+
+        Arguments:
+            left {VariableValue} -- The value to be checked against
+
+        Returns:
+            SelectionStatement -- The condition and block on the statement
+        """
         if self.current_token.value != 'OTHERWISE':
             self.check_token_value('CASE')
             condition = self.case_condition(left)
@@ -581,13 +620,20 @@ class Analyzer():
         return SelectionStatement(condition, block)
 
     def case_condition(self, left):
-        # variable (TO, .., ,) expression
+        """Verifies the types of conditions used for CASE statements
 
+        Arguments:
+            left {VariableValue} -- The value to be checked against
+
+        Returns:
+            Condition -- The left and right side of a condition with the conditional operator
+        """
+
+        # variable (TO, .., ,) expression
         options = []
         options.append(self.expression())
 
         # FIXME October 25, 2019: Does not work for ASCII ranges
-
         if self.current_token.value == 'TO' or self.current_token.value == '..':
             if self.current_token.value == 'TO':
                 self.check_token_value('TO')
@@ -617,6 +663,11 @@ class Analyzer():
     # START: Iteration
 
     def iteration(self):
+        """Verifies the syntax of a FOR loop
+
+        Returns:
+            Iteration -- All components needed for an iterative block
+        """
         # FOR VARIABLE ASSIGNMENT INTEGER TO INTEGER (STEP INTEGER)
         #   block
         # ENDFOR
@@ -637,14 +688,19 @@ class Analyzer():
         block = self.block(['ENDFOR'])
         self.check_token_type('KEYWORD')
 
-        iteration = Iteration(variable, assignment, end, step, block)
-        return iteration
+        return Iteration(variable, assignment, end, step, block)
 
     # END: Iteration
 
     # START: Post-condition Loop
 
     def post_condition_loop(self):
+        """Verifies the syntax for a DO..UNTIL loop
+
+        Returns:
+            Loop -- The condition and code block of the loop
+        """
+
         # REPEAT
         #   block
         # UNTIL condition
@@ -661,6 +717,12 @@ class Analyzer():
     # START: Pre-condition Loop
 
     def pre_condition_loop(self):
+        """Verifies the syntax for a WHILE..ENDWHILE loop
+
+        Returns:
+            Loop -- The condition and code block of the loop
+        """
+
         # WHILE condition
         #   block
         # ENDWHILE
@@ -677,6 +739,11 @@ class Analyzer():
     # START: Built-in Function
 
     def builtin_function(self):
+        """Verifies the syntax of built-in functions
+
+        Returns:
+            BuiltInFunction -- name and parameters of the function
+        """
         name = self.current_token
         self.check_token_type('BUILTIN_FUNCTION')
         self.check_token_value('(')
@@ -697,7 +764,13 @@ class Analyzer():
     # END: Built-in Function
 
     def parameter(self):
-        # VARIABLE COLON DATA_TYPE
+        """Verifies the parameters used when declaring a procedure/function
+
+        Returns:
+            Parameter -- The metadata of the parameter
+        """
+
+        # VARIABLE : DATA_TYPE
         reference_type = self.current_token
         if self.current_token.value in ['BYREF', 'BYVAL']:
             self.check_token_type('KEYWORD')
@@ -706,10 +779,17 @@ class Analyzer():
         self.check_token_type('COLON')
         data_type = self.data_type()
 
-        node = Parameter(variable, data_type, reference_type)
-        return node
+        return Parameter(variable, data_type, reference_type)
+
 
     def call(self):
+        """Verifies the syntax of a call to a procedure/function
+
+        Returns:
+            FunctionCall -- The name and parameters passed into the procedure/function
+        """
+
+        # CALL value((parameter)*)
         self.check_token_type('KEYWORD')
         name = Value(self.current_token)
         self.check_token_type('VARIABLE')
@@ -732,6 +812,15 @@ class Analyzer():
     # START: Procedure
 
     def procedure(self):
+        """Verifies the declaration of a procedure
+
+        Returns:
+            Function -- The metadata of the procedure being declared
+        """
+
+        # PROCEDURE variable(parameters)
+        #   block
+        # ENDPROCEDURE
         self.check_token_type('KEYWORD')
         name = Value(self.current_token)
         self.check_token_type('VARIABLE')
@@ -757,6 +846,15 @@ class Analyzer():
     # START: Function
 
     def function(self):
+        """Verifies the declaration of a function
+
+        Returns:
+            Function -- The metadata of the function being declared
+        """
+
+        # FUNCTION variable(parameters) : data_type
+        #   block
+        # ENDFUNCTION
         self.check_token_type('KEYWORD')
         name = Value(self.current_token)
         self.check_token_type('VARIABLE')
@@ -790,6 +888,12 @@ class Analyzer():
     # START: File
 
     def open_file(self):
+        """Verifies the syntax of opening a file
+
+        Returns:
+            File -- The name and access type of a file
+        """
+
         self.check_token_type('KEYWORD')
         file_name = Value(self.current_token)
         self.check_token_type('STRING')
@@ -800,6 +904,12 @@ class Analyzer():
         return File(file_name, file_mode)
 
     def read_file(self):
+        """Verifies the syntax of reading from a file
+
+        Returns:
+            ReadFile -- The name and instance for storing line of a file
+        """
+
         self.check_token_type('KEYWORD')
         file_name = VariableValue(self.current_token)
         self.check_token_type('STRING')
@@ -810,6 +920,11 @@ class Analyzer():
         return ReadFile(file_name, variable)
 
     def write_file(self):
+        """Verifies the syntax of writing to a file
+
+        Returns:
+            WriteFile -- The name and value to write to a file
+        """
         self.check_token_type('KEYWORD')
         file_name = VariableValue(self.current_token)
         self.check_token_type('STRING')
@@ -819,6 +934,11 @@ class Analyzer():
         return WriteFile(file_name, line)
 
     def close_file(self):
+        """Verifies the syntax of closing file
+
+        Returns:
+            CloseFile -- The name of the file to close
+        """
         self.check_token_type('KEYWORD')
         file_name = VariableValue(self.current_token)
         self.check_token_type('STRING')
@@ -830,6 +950,11 @@ class Analyzer():
     # START: Type
 
     def declare_type(self):
+        """Verifies the declaration of TYPE
+
+        Returns:
+            TypeDeclaration -- Name and code block of the TYPE declaration
+        """
         self.check_token_type('KEYWORD')
         type_name = Value(self.current_token)
         self.check_token_type('VARIABLE')

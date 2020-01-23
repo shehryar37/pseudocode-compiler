@@ -5,11 +5,11 @@ from error import Error
 class DataType():
     """Super class for all data types"""
 
-    def __init__(self, data_type, referee_name=None, reference_type='BYVAL'):
+    def __init__(self, data_type, referee_name=None, reference_type='BYVAL', default=None):
         self.data_type = data_type
         self.referee_name = referee_name
         self.reference_type = reference_type
-
+        self.default = default
 # START: Variable
 
 
@@ -20,7 +20,7 @@ class VariableType(DataType):
         DataType {DataType} -- This class inherits its __init__() function from it
     """
 
-    def __init__(self, data_type, referee_name=None, reference_type='BYVAL'):
+    def __init__(self, data_type, referee_name=None, reference_type='BYVAL', default=None):
         """Initializes a variable
 
         Arguments:
@@ -30,7 +30,7 @@ class VariableType(DataType):
             referee_name {str} -- The name of the variable this instance is being copied from in the parent scope (default: {None})
             reference_type {str} -- The type of reference being used when passing this instance as a parameter (default: {'BYVAL'})
         """
-        super().__init__(data_type, referee_name, reference_type)
+        super().__init__(data_type, referee_name, reference_type, default)
 
     def declare(self):
         """Declares a variable
@@ -38,15 +38,15 @@ class VariableType(DataType):
         Returns:
             Variable -- The value of the instance encapsulated inside the Variable class
         """
-        return Variable()
+        return Variable(self.default)
 
 
 class Variable():
     """Class for Variable used in the VariableType class"""
 
-    def __init__(self):
+    def __init__(self, default):
         """Assigns a value (None) to a Variable"""
-        self.value = None
+        self.value = default
 
     def assign(self, value):
         """Assigns a value to a Variable
@@ -112,7 +112,7 @@ class ArrayType(DataType):
         DataType {DataType} -- This class inherits its __init__() function from it
     """
 
-    def __init__(self, dimensions, data_type, referee_name=None, reference_type='BYVAL'):
+    def __init__(self, dimensions, data_type, referee_name=None, reference_type='BYVAL', default=None):
         """Initializes an array
 
         Arguments:
@@ -123,7 +123,7 @@ class ArrayType(DataType):
             referee_name {str} -- The name of the variable this instance is being copied from in the parent scope (default: {None})
             reference_type {str} -- The type of reference being used when passing this instance as a parameter (default: {'BYVAL'})
         """
-        super().__init__(data_type, referee_name, reference_type)
+        super().__init__(data_type, referee_name, reference_type, default)
         self.dimensions = dimensions
 
     def declare(self):
@@ -141,7 +141,7 @@ class ArrayType(DataType):
             # Checks if its the deepest layer
             if i + 1 == layers:
                 for j in range(self.dimensions[i][0], self.dimensions[i][1] + 1):
-                    deep_layer_indexes[j] = None
+                    deep_layer_indexes[j] = self.default
             else:
                 # Append deep layer to the shallow layer
                 shallow_layer_indexes = copy(deep_layer_indexes)
@@ -192,7 +192,7 @@ class Array():
 
 
 class TypeType(DataType):
-    def __init__(self, scope, data_type, referee_name=None, reference_type='BYVAL'):
+    def __init__(self, fields, data_type, referee_name=None, reference_type='BYVAL'):
         """Initializes a type
 
         Arguments:
@@ -203,8 +203,12 @@ class TypeType(DataType):
             referee_name {str} -- The name of the variable this instance is being copied from in the parent scope (default: {None})
             reference_type {str} -- The type of reference being used when passing this instance as a parameter (default: {'BYVAL'})
         """
-        super().__init__(data_type, referee_name, reference_type)
-        self.fields = scope.SYMBOL_TABLE.SYMBOL_TABLE
+        self.fields = fields
+        default = {}
+        for field in fields.keys():
+            default[field] = fields[field].declare()
+
+        super().__init__(data_type, referee_name, reference_type, default)
 
     def declare(self):
         """Declares an array
@@ -220,8 +224,8 @@ class TypeType(DataType):
 
 
 class Type():
-    def __init__(self, field_values):
-        self.value = field_values
+    def __init__(self, name, value):
+        self.value = value
 
     def assign(self, data):
         value = data[0]

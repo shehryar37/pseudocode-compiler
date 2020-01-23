@@ -15,6 +15,7 @@ class Interpreter():
 
         tree = analyzer.block(['EOF'])
         self.visit(tree)
+        pass
 
     def visit(self, node):
         method_name = 'visit_' + type(node).__name__
@@ -112,9 +113,9 @@ class Interpreter():
         data_type = data_type.value
 
         if data_type in self.CURRENT_SCOPE.DATA_TYPES.keys():
-            return VariableType(data_type)
+            return VariableType(data_type, default=Variable(None))
         elif data_type in self.CURRENT_SCOPE.USER_DEFINED_DATA_TYPES.keys():
-            return TypeType(self.CURRENT_SCOPE.USER_DEFINED_DATA_TYPES[data_type],data_type)
+            return TypeType(self.CURRENT_SCOPE.USER_DEFINED_DATA_TYPES[data_type].SYMBOL_TABLE.SYMBOL_TABLE, data_type)
         else:
             Error().type_error('TYPE {} has not been initialized'.format(data_type))
 
@@ -123,10 +124,10 @@ class Interpreter():
     # START: Array Declaration
 
     def visit_Array(self, node):
-        data_type = self.visit(node.data_type).data_type
+        data_type = self.visit(node.data_type)
         dimensions = self.visit(node.dimensions)
 
-        return ArrayType(dimensions, data_type)
+        return ArrayType(dimensions, data_type.data_type, default=data_type.default)
 
     def visit_Dimensions(self, dimensions):
         dimension_list = []
@@ -183,40 +184,7 @@ class Interpreter():
         name = self.visit(node.variable)
         value = self.visit(node.expression)
 
-        if type(name) is not list:
-            metadata = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(name)
-            if type(metadata) == VariableType:
-                self.check_type(metadata.data_type, value, name)
-                self.CURRENT_SCOPE.assign(name, value)
-            elif type(metadata) == ConstantType:
-                Error().name_error('Cannot assign to CONSTANT')
-            elif type(metadata) == ArrayType:
-                self.CURRENT_SCOPE.assign(name, value)
-            else:
-                Error().unbound_local_error(name)
-        elif type(name) is list:
-            metadata = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(name[0])
-            if type(metadata) == ArrayType:
-                indexes = name[1]
-                name = name[0]
-                self.check_type(metadata.data_type, value, name)
-
-                self.CURRENT_SCOPE.assign(name, value, indexes)
-            elif type(metadata) == TypeType:
-                field_name = name[1]
-                field_metadata = metadata.fields.get(field_name)
-                name = name[0]
-
-                if self.CURRENT_SCOPE.get(name) is None:
-                    Error().unbound_local_error(name)
-
-                if field_metadata is None:
-                    Error().name_error('{}.{}'.format(name, field_name))
-
-                self.check_type(field_metadata.data_type, value, name)
-                self.CURRENT_SCOPE.assign(name, value, field_name)
-            else:
-                Error().unbound_local_error(name[0])
+        self.CURRENT_SCOPE.assign(name, value)
 
     def visit_VariableName(self, node):
         name = node.value
@@ -237,7 +205,7 @@ class Interpreter():
         for index in node.indexes:
             indexes.append(self.visit(index))
 
-        return [node.value, indexes]
+        return ArrayAssignment(node.value, indexes)
 
     def visit_ElementValue(self, node):
         name = node.value
@@ -280,7 +248,7 @@ class Interpreter():
         name = self.visit(node.object_name)
         field = self.visit(node.field_name)
 
-        return [name, field]
+        return TypeAssignment(name, field)
 
     def visit_TypeValue(self, node):
         name = self.visit(node.object_name)
@@ -468,7 +436,6 @@ class Interpreter():
 
                     if reference_type == 'BYREF':
                         try:
-                            # FIXME November 07, 2019: This will not work for arrays
                             referee_name = node.parameters[i].value
                         except:
                             Error().reference_error('A variable must be passed into BYREF')
@@ -611,4 +578,63 @@ class Interpreter():
         except:
             Error().unbound_local_error(name)
 
+    # def assignment(self, name, value): # There used to be key=None here
+    #     """Inserts a value into VALUES within Scopes
+
+    #     Arguments:
+    #         name {str/ArrayAssignment/TypeAssignment} -- The metadata of the instance
+    #         value {int/str/bool/char} -- The value to insert for the instance
+    #     """
+
+    #     # if type(name) is str:
+    #     #     metadata = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(name)
+    #     #     if type(metadata) == VariableType:
+    #     #         self.check_type(metadata.data_type, value, name)
+    #     #         self.CURRENT_SCOPE.assign(name, value)
+    #     #     elif type(metadata) == ConstantType:
+    #     #         Error().name_error('Cannot assign to CONSTANT')
+    #     #     elif type(metadata) == ArrayType:
+    #     #         self.CURRENT_SCOPE.assign(name, value)
+    #     #     else:
+    #     #         Error().unbound_local_error(name)
+    #     # elif type(name) is ArrayAssignment:
+    #     #     metadata = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(name.name)
+    #     #     if type(metadata) == ArrayType:
+    #     #         indexes = name.indexes
+    #     #         name = name.name
+    #     #         self.check_type(metadata.data_type, value, name)
+    #     #         self.CURRENT_SCOPE.assign(name, value, indexes)
+    #     # elif type(name) == TypeAssignment:
+    #     #     metadata = self.CURRENT_SCOPE.SYMBOL_TABLE.lookup(name.name)
+    #     #     field_name = name.field
+    #     #     field_metadata = metadata.fields.get(field_name)
+    #     #     name = name.name
+    #     #     if self.CURRENT_SCOPE.get(name) is None:
+    #     #         Error().unbound_local_error(name)
+    #     #     if field_metadata is None:
+    #     #         Error().name_error('{}.{}'.format(name, field_name))
+    #     #     self.check_type(field_metadata.data_type, value, name)
+    #     #     self.CURRENT_SCOPE.assign(name, value, field_name)
+    #     # else:
+    #     #     Error().unbound_local_error(name[0])
+
+
     # END: Helper Functions
+
+# START: Helper Classes
+
+class Assignment():
+    def __init__(self, name):
+        self.name = name
+
+class ArrayAssignment(Assignment):
+    def __init__(self, name, indexes):
+        super().__init__(name)
+        self.indexes = indexes
+
+class TypeAssignment(Assignment):
+    def __init__(self, name, field):
+        super().__init__(name)
+        self.field = field
+
+# END: Helper Classes

@@ -25,6 +25,7 @@ class Scope():
             # Copy DATA_TYPES and VALUES from the parent scope
             self.DATA_TYPES = deepcopy(self.PARENT_SCOPE.DATA_TYPES)
             self.VALUES = deepcopy(self.PARENT_SCOPE.VALUES)
+            self.USER_DEFINED_DATA_TYPES = PARENT_SCOPE.USER_DEFINED_DATA_TYPES
 
     def declare(self, name, metadata):
         """Adds an instance to SYMBOL_TABLE
@@ -43,12 +44,16 @@ class Scope():
             *data {list} -- The value (+indexes/property) of the instance
         """
 
-        if self.VALUES.get(variable_name) is None:
-            # Set the instance of variable_name in VALUES to None
-            self.VALUES[variable_name] = data[0]
-        else:
-            # Set the instance of variable_name in VALUES to data[0]
-            self.VALUES[variable_name].assign(data)
+        # Sends the data to the respective data_types.py class
+        self.VALUES[variable_name].assign(data)
+
+        # if self.VALUES.get(variable_name) is None:
+        #     # Set the instance of variable_name in VALUES to None
+        #     # This will only be accessed when declaring the variable
+        #     self.VALUES[variable_name] = data[0]  # always None
+        # else:
+        #     # Set the instance of variable_name in VALUES to data[0]
+        #     self.VALUES[variable_name].assign(data)
 
     def get(self, variable_name):
         """Fetches the value of an instance stored inside VALUES
