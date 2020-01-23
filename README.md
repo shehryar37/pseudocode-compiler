@@ -6,7 +6,7 @@ Pseudo is a translator that allows CAIE students to practice writing code on a c
 ### Requirements
 
 Pseudo translates pseudocode to Python, therefore the following are necessary:
-* Python version 3.x
+* Python version 3.x ([click here](https://wiki.python.org/moin/BeginnersGuide/Download) for installation guide)
 * A GUI that can run Python code (such as Visual Studio Code and Atom)
 
 ### Installation
